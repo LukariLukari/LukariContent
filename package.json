@@ -1,0 +1,12 @@
+{
+  "name": "lukaricontent-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix creator-script-studio",
+    "build": "npm run build --prefix creator-script-studio",
+    "start": "npm run start --prefix creator-script-studio",
+    "lint": "npm run lint --prefix creator-script-studio",
+    "install-all": "npm install --prefix creator-script-studio"
+  }
+}
