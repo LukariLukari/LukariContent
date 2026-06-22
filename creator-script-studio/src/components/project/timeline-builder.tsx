@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { 
   DndContext, 
   closestCenter,
@@ -18,12 +18,16 @@ import {
   useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, Trash2, Eye, Type, MessageSquare, MoveDown } from "lucide-react";
+import { GripVertical, Plus, Trash2, Type, MessageSquare, MoveDown, Download, Loader2 } from "lucide-react";
+import { toPng } from "html-to-image";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 import { useProjects, ScriptBlock } from "@/hooks/use-projects";
+import { Montserrat } from "next/font/google";
+
+const montserrat = Montserrat({ subsets: ["latin"] });
 
 function SortableBlock({ block, index, onDelete, onUpdateTime, onUpdateField }: { block: any, index: number, onDelete: (id: string) => void, onUpdateTime: (id: string, newTime: string) => void, onUpdateField: (id: string, field: string, value: string) => void }) {
   const {
@@ -111,6 +115,8 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
   const { getProject, updateProjectBlocks, updateProjectName, updateProjectDescription, isLoaded } = useProjects();
   const project = getProject(projectId);
   const blocks = project?.blocks || [];
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const setBlocks = (newBlocks: ScriptBlock[] | ((prev: ScriptBlock[]) => ScriptBlock[])) => {
     if (typeof newBlocks === "function") {
@@ -169,6 +175,56 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
     setBlocks(blocks.map(b => b.id === id ? { ...b, [field]: value } : b));
   };
 
+  const exportAsImage = async () => {
+    if (!containerRef.current) return;
+    setIsExporting(true);
+    try {
+      // Step 1: Fetch Google Fonts CSS (must use browser-like User-Agent to get woff2 URLs)
+      const cssUrl = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap';
+      const cssResponse = await fetch(cssUrl);
+      let fontCss = await cssResponse.text();
+
+      // Step 2: Find ALL woff2 font file URLs in the CSS (each subset has its own file)
+      const fontUrlRegex = /url\((https:\/\/fonts\.gstatic\.com\/[^)]+\.woff2)\)/g;
+      const fontUrls = new Set<string>();
+      let match;
+      while ((match = fontUrlRegex.exec(fontCss)) !== null) {
+        fontUrls.add(match[1]);
+      }
+
+      // Step 3: Download each font file and convert to base64 data URL
+      for (const url of fontUrls) {
+        const response = await fetch(url);
+        const buffer = await response.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+        // Replace the external URL with inline base64 data URL
+        fontCss = fontCss.replaceAll(url, `data:font/woff2;base64,${base64}`);
+      }
+
+      // Step 4: Add a global override to force Montserrat on all elements
+      fontCss += `\n* { font-family: 'Montserrat', sans-serif !important; }`;
+
+      const dataUrl = await toPng(containerRef.current, {
+        backgroundColor: '#F7F3EE',
+        pixelRatio: 2,
+        fontEmbedCSS: fontCss,
+        style: {
+          fontFamily: "'Montserrat', sans-serif",
+        }
+      });
+      const link = document.createElement("a");
+      link.download = `${project?.name || "kich-ban"}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error("Lỗi xuất ảnh:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (!isLoaded || !project) {
     return <div className="text-muted-foreground p-8 text-center">Đang tải kịch bản...</div>;
   }
@@ -192,13 +248,20 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
             placeholder="Mô tả kịch bản..."
           />
         </div>
-        <Button onClick={addBlock} size="lg" className="h-12 px-6 text-base font-medium">
-          <Plus className="mr-2 h-5 w-5" /> Thêm Phân Cảnh
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={exportAsImage} disabled={isExporting} variant="outline" size="lg" className="h-12 px-6 text-base font-medium">
+            {isExporting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Download className="mr-2 h-5 w-5" />}
+            Xuất Ảnh
+          </Button>
+          <Button onClick={addBlock} size="lg" className="h-12 px-6 text-base font-medium">
+            <Plus className="mr-2 h-5 w-5" /> Thêm Phân Cảnh
+          </Button>
+        </div>
       </div>
 
-      <div className="pl-8 py-6">
-        <DndContext 
+      <div className={`pl-8 py-6 ${montserrat.className}`} ref={containerRef}>
+        <div className="bg-paper p-4 -m-4 rounded-xl">
+          <DndContext 
           id="dnd-context"
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -220,6 +283,7 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
             ))}
           </SortableContext>
         </DndContext>
+        </div>
       </div>
     </div>
   );
