@@ -16,6 +16,7 @@ export type ScriptBlock = {
 export type Project = {
   id: string;
   name: string;
+  description?: string;
   updatedAt: string;
   blocks: ScriptBlock[];
 };
@@ -23,23 +24,13 @@ export type Project = {
 const defaultBlocks: ScriptBlock[] = [
   {
     id: "block-1",
-    time: "0s - 3s",
-    visual: "Cận cảnh làn da xỉn màu/mệt mỏi dưới ánh sáng chói vào lúc 3 giờ chiều.",
-    action: "Người sáng tạo trông kiệt sức, thở dài và chỉ vào màn hình.",
-    dialogue: "Dừng lướt web nếu da bạn trông như thế này vào lúc 3 giờ chiều...",
-    camera: "Cận cảnh, tĩnh",
-    caption: "MỆT MỎI LÚC 3H CHIỀU? 😫",
-    emotion: "Thất vọng, mệt mỏi"
-  },
-  {
-    id: "block-2",
-    time: "3s - 8s",
-    visual: "Người sáng tạo thoa GlowBeauty Serum. Làn da lập tức trông sáng hơn.",
-    action: "Thoa đều serum lên da, mỉm cười khi tinh chất thẩm thấu.",
-    dialogue: "Serum Vitamin C 15% này từ GlowBeauty đã thay đổi hoàn toàn thói quen của tôi.",
-    camera: "Cảnh trung, zoom nhẹ năng động",
-    caption: "Bí mật: 15% Vit C Nguyên Chất ✨",
-    emotion: "Hào hứng, nhẹ nhõm"
+    time: "0s - 5s",
+    visual: "",
+    action: "",
+    dialogue: "",
+    camera: "",
+    caption: "",
+    emotion: ""
   }
 ];
 
@@ -85,6 +76,18 @@ export function useProjects() {
     ));
   };
 
+  const updateProjectName = (id: string, name: string) => {
+    saveProjects(projects.map(p => 
+      p.id === id ? { ...p, name, updatedAt: new Date().toISOString() } : p
+    ));
+  };
+
+  const updateProjectDescription = (id: string, description: string) => {
+    saveProjects(projects.map(p => 
+      p.id === id ? { ...p, description, updatedAt: new Date().toISOString() } : p
+    ));
+  };
+
   const getProject = (id: string) => {
     return projects.find(p => p.id === id);
   };
@@ -95,6 +98,8 @@ export function useProjects() {
     createProject,
     deleteProject,
     updateProjectBlocks,
+    updateProjectName,
+    updateProjectDescription,
     getProject
   };
 }

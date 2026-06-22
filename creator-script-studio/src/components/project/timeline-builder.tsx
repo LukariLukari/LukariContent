@@ -25,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useProjects, ScriptBlock } from "@/hooks/use-projects";
 
-function SortableBlock({ block, index, onDelete, onUpdateTime }: { block: any, index: number, onDelete: (id: string) => void, onUpdateTime: (id: string, newTime: string) => void }) {
+function SortableBlock({ block, index, onDelete, onUpdateTime, onUpdateField }: { block: any, index: number, onDelete: (id: string) => void, onUpdateTime: (id: string, newTime: string) => void, onUpdateField: (id: string, field: string, value: string) => void }) {
   const {
     attributes,
     listeners,
@@ -45,52 +45,61 @@ function SortableBlock({ block, index, onDelete, onUpdateTime }: { block: any, i
     <Card 
       ref={setNodeRef} 
       style={style} 
-      className={`mb-4 relative group ${isDragging ? 'shadow-xl border-primary ring-1 ring-primary/20' : 'shadow-sm hover:border-border/80'}`}
+      className={`mb-6 relative group ${isDragging ? 'shadow-2xl border-primary ring-2 ring-primary/20' : 'shadow-md hover:border-border/80'}`}
     >
-      <div className="absolute left-[-28px] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="icon" className="h-6 w-6 cursor-grab" {...attributes} {...listeners}>
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <div className="absolute left-[-36px] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon" className="h-10 w-10 cursor-grab" {...attributes} {...listeners}>
+          <GripVertical className="h-6 w-6 text-muted-foreground" />
         </Button>
       </div>
       
-      <div className="p-4 flex flex-col gap-4">
-        <div className="flex items-center justify-between border-b border-border/50 pb-2">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center bg-asphalt text-paper h-6 w-6 rounded-full text-xs font-bold">
+      <div className="p-6 flex flex-col gap-6">
+        <div className="flex items-center justify-between border-b border-border/50 pb-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center bg-asphalt text-paper h-10 w-10 rounded-full text-base font-bold shadow-sm">
               {index + 1}
             </div>
             <input
               type="text"
               value={block.time}
               onChange={(e) => onUpdateTime(block.id, e.target.value)}
-              className="text-xs font-semibold bg-secondary/50 text-foreground px-2.5 py-1 rounded-md border border-border/50 shadow-sm w-24 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="text-base font-semibold bg-secondary/50 text-foreground px-4 py-2 rounded-md border border-border/50 shadow-sm w-32 focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(block.id)}>
-            <Trash2 className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(block.id)}>
+            <Trash2 className="h-5 w-5" />
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-3">
-             <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5 tracking-wider"><Eye className="h-3.5 w-3.5"/> Hình ảnh</label>
-                <Textarea defaultValue={block.visual} className="min-h-[60px] text-sm resize-none bg-transparent" />
-             </div>
-             <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5 tracking-wider"><MessageSquare className="h-3.5 w-3.5"/> Thoại / Lồng tiếng</label>
-                <Textarea defaultValue={block.dialogue} className="min-h-[60px] text-sm resize-none bg-primary/5 border-primary/20 focus-visible:ring-primary/30" />
-             </div>
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs uppercase font-bold text-muted-foreground flex items-center gap-2 tracking-wider"><Type className="h-4 w-4"/> Phụ đề & Góc máy</label>
+              <Textarea 
+                value={block.camera} 
+                onChange={(e) => onUpdateField(block.id, 'camera', e.target.value)}
+                placeholder="Nhập góc máy và phụ đề..."
+                className="min-h-[80px] text-base resize-none bg-transparent" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs uppercase font-bold text-muted-foreground flex items-center gap-2 tracking-wider"><MoveDown className="h-4 w-4"/> Hành động & Cảm xúc</label>
+              <Textarea 
+                value={block.action} 
+                onChange={(e) => onUpdateField(block.id, 'action', e.target.value)}
+                placeholder="Nhập hành động và cảm xúc..."
+                className="min-h-[80px] text-base resize-none bg-transparent" 
+              />
+            </div>
           </div>
-          <div className="space-y-3">
-             <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5 tracking-wider"><MoveDown className="h-3.5 w-3.5"/> Hành động & Cảm xúc</label>
-                <Textarea defaultValue={`${block.action} (${block.emotion})`} className="min-h-[60px] text-sm resize-none bg-transparent" />
-             </div>
-             <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5 tracking-wider"><Type className="h-3.5 w-3.5"/> Phụ đề & Góc máy</label>
-                <Textarea defaultValue={`[${block.camera}]\n"${block.caption}"`} className="min-h-[60px] text-sm resize-none bg-transparent" />
-             </div>
+          <div className="space-y-2">
+            <label className="text-xs uppercase font-bold text-muted-foreground flex items-center gap-2 tracking-wider"><MessageSquare className="h-4 w-4"/> Thoại / Lồng tiếng</label>
+            <Textarea 
+              value={block.dialogue} 
+              onChange={(e) => onUpdateField(block.id, 'dialogue', e.target.value)}
+              placeholder="Nhập lời thoại hoặc kịch bản lồng tiếng..."
+              className="min-h-[140px] text-base lg:text-lg resize-none bg-primary/5 border-primary/20 focus-visible:ring-primary/30" 
+            />
           </div>
         </div>
       </div>
@@ -99,7 +108,7 @@ function SortableBlock({ block, index, onDelete, onUpdateTime }: { block: any, i
 }
 
 export function TimelineBuilder({ projectId }: { projectId: string }) {
-  const { getProject, updateProjectBlocks, isLoaded } = useProjects();
+  const { getProject, updateProjectBlocks, updateProjectName, updateProjectDescription, isLoaded } = useProjects();
   const project = getProject(projectId);
   const blocks = project?.blocks || [];
 
@@ -156,23 +165,39 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
     setBlocks(blocks.map(b => b.id === id ? { ...b, time: newTime } : b));
   };
 
+  const updateField = (id: string, field: string, value: string) => {
+    setBlocks(blocks.map(b => b.id === id ? { ...b, [field]: value } : b));
+  };
+
   if (!isLoaded || !project) {
     return <div className="text-muted-foreground p-8 text-center">Đang tải kịch bản...</div>;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between pb-4 border-b">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between pb-6 border-b">
         <div>
-          <h2 className="text-xl font-bold">{project.name}</h2>
-          <p className="text-sm text-muted-foreground">Kéo thả để sắp xếp lại phân cảnh. Yêu cầu AI Copilot tạo hoặc viết lại các khối.</p>
+          <input 
+            type="text"
+            value={project.name}
+            onChange={(e) => updateProjectName(project.id, e.target.value)}
+            className="text-3xl font-bold bg-transparent border-none outline-none focus:ring-1 focus:ring-primary/50 rounded px-1 -ml-1 w-full max-w-2xl tracking-tight"
+            placeholder="Tên kịch bản..."
+          />
+          <input 
+            type="text"
+            value={project.description ?? "Kéo thả để sắp xếp lại phân cảnh. Yêu cầu AI Copilot tạo hoặc viết lại các khối."}
+            onChange={(e) => updateProjectDescription(project.id, e.target.value)}
+            className="text-base lg:text-lg text-muted-foreground mt-2 bg-transparent border-none outline-none focus:ring-1 focus:ring-primary/50 rounded px-1 -ml-1 w-full max-w-3xl block"
+            placeholder="Mô tả kịch bản..."
+          />
         </div>
-        <Button onClick={addBlock}>
-          <Plus className="mr-2 h-4 w-4" /> Thêm Phân Cảnh
+        <Button onClick={addBlock} size="lg" className="h-12 px-6 text-base font-medium">
+          <Plus className="mr-2 h-5 w-5" /> Thêm Phân Cảnh
         </Button>
       </div>
 
-      <div className="pl-6 py-4">
+      <div className="pl-8 py-6">
         <DndContext 
           id="dnd-context"
           sensors={sensors}
@@ -184,7 +209,14 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
             strategy={verticalListSortingStrategy}
           >
             {blocks.map((block, index) => (
-              <SortableBlock key={block.id} block={block} index={index} onDelete={deleteBlock} onUpdateTime={updateTime} />
+              <SortableBlock 
+                key={block.id} 
+                block={block} 
+                index={index} 
+                onDelete={deleteBlock} 
+                onUpdateTime={updateTime} 
+                onUpdateField={updateField} 
+              />
             ))}
           </SortableContext>
         </DndContext>
