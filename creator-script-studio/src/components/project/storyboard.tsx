@@ -57,11 +57,11 @@ export function StoryboardView() {
                 <CardContent className="flex-1 p-4 grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Visual Action</h4>
-                    <p className="text-sm text-foreground/80 leading-relaxed">{block.visual}</p>
+                    <div className="text-sm text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: block.visual }} />
                   </div>
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Dialogue / VO</h4>
-                    <p className="text-sm italic font-medium leading-relaxed">&quot;{block.dialogue}&quot;</p>
+                    <div className="text-sm italic font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: `&quot;${block.dialogue}&quot;` }} />
                   </div>
                 </CardContent>
               </div>

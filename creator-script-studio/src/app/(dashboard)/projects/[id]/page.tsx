@@ -24,7 +24,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         </div>
 
         <div className="flex-1 overflow-y-auto bg-secondary/5 p-6">
-          <div className="mx-auto max-w-4xl h-full">
+          <div className="mx-auto w-full h-full">
             <TimelineBuilder projectId={id} />
           </div>
         </div>
