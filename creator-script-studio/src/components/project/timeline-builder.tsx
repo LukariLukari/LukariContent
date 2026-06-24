@@ -18,19 +18,32 @@ import {
   useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, Trash2, Type, MessageSquare, MoveDown, Download, Loader2 } from "lucide-react";
+import { GripVertical, Plus, Trash2, Type, MessageSquare, MoveDown, Download, Loader2, ChevronDown, Copy, Check } from "lucide-react";
 import { toPng } from "html-to-image";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 import { useProjects, ScriptBlock } from "@/hooks/use-projects";
 import { Montserrat } from "next/font/google";
 
 const montserrat = Montserrat({ subsets: ["latin"] });
 
-function SortableBlock({ block, index, onDelete, onUpdateTime, onUpdateField, onInsertAfter }: { block: any, index: number, onDelete: (id: string) => void, onUpdateTime: (id: string, newTime: string) => void, onUpdateField: (id: string, field: string, value: string) => void, onInsertAfter: (index: number) => void }) {
+function SortableBlock({ block, index, onDelete, onUpdateTime, onUpdateField, onInsertAfter, onExportScene, onCopyScene }: { block: any, index: number, onDelete: (id: string) => void, onUpdateTime: (id: string, newTime: string) => void, onUpdateField: (id: string, field: string, value: string) => void, onInsertAfter: (index: number) => void, onExportScene: (id: string, index: number) => void, onCopyScene: (id: string) => Promise<void> }) {
+  const [copyState, setCopyState] = useState<'idle' | 'copying' | 'copied'>('idle');
+
+  const handleCopy = async () => {
+    if (copyState === 'copying') return;
+    setCopyState('copying');
+    await onCopyScene(block.id);
+    setCopyState('copied');
+    setTimeout(() => setCopyState('idle'), 2000);
+  };
+
   const {
     attributes,
     listeners,
@@ -52,7 +65,7 @@ function SortableBlock({ block, index, onDelete, onUpdateTime, onUpdateField, on
       style={style} 
       className="relative group h-full"
     >
-      <Card className={`relative h-full flex flex-col ${isDragging ? 'shadow-2xl border-primary ring-2 ring-primary/20' : 'shadow-md hover:border-border/80'}`}>
+      <Card id={`scene-card-${block.id}`} className={`relative h-full flex flex-col ${isDragging ? 'shadow-2xl border-primary ring-2 ring-primary/20' : 'shadow-md hover:border-border/80'}`}>
         <div className="absolute left-[-36px] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button variant="ghost" size="icon" className="h-10 w-10 cursor-grab" {...attributes} {...listeners}>
             <GripVertical className="h-6 w-6 text-muted-foreground" />
@@ -72,9 +85,17 @@ function SortableBlock({ block, index, onDelete, onUpdateTime, onUpdateField, on
                 className="text-base font-semibold bg-secondary/50 text-foreground px-4 py-2 rounded-md border border-border/50 shadow-sm w-32 focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
-            <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(block.id)}>
-              <Trash2 className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" onClick={handleCopy} title="Copy ảnh cảnh này" disabled={copyState === 'copying'}>
+                {copyState === 'copied' ? <Check className="h-5 w-5 text-green-500" /> : copyState === 'copying' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Copy className="h-5 w-5" />}
+              </Button>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" onClick={() => onExportScene(block.id, index)} title="Tải ảnh cảnh này">
+                <Download className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(block.id)} title="Xóa cảnh này">
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-col gap-6">
@@ -212,9 +233,7 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
     setBlocks(blocks.map(b => b.id === id ? { ...b, [field]: value } : b));
   };
 
-  const exportAsImage = async () => {
-    if (!containerRef.current) return;
-    setIsExporting(true);
+  const generateImageWithFonts = async (node: HTMLElement, filename: string, returnDataOnly = false) => {
     try {
       // Step 1: Fetch Google Fonts CSS (must use browser-like User-Agent to get woff2 URLs)
       const cssUrl = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap';
@@ -243,22 +262,87 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
       // Step 4: Add a global override to force Montserrat on all elements
       fontCss += `\n* { font-family: 'Montserrat', sans-serif !important; }`;
 
-      const dataUrl = await toPng(containerRef.current, {
+      const dataUrl = await toPng(node, {
         backgroundColor: '#F7F3EE',
         pixelRatio: 2,
         fontEmbedCSS: fontCss,
         style: {
           fontFamily: "'Montserrat', sans-serif",
+          margin: '0',
         }
       });
-      const link = document.createElement("a");
-      link.download = `${project?.name || "kich-ban"}.png`;
-      link.href = dataUrl;
-      link.click();
+      if (returnDataOnly) {
+        return dataUrl;
+      }
+      saveAs(dataUrl, filename);
+      return null;
     } catch (error) {
       console.error("Lỗi xuất ảnh:", error);
+      return null;
+    }
+  };
+
+  const exportAsImage = async () => {
+    if (!containerRef.current) return;
+    setIsExporting(true);
+    try {
+      await generateImageWithFonts(containerRef.current, `${project?.name || "kich-ban"}.png`);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const exportSceneAsImage = async (id: string, index: number) => {
+    const node = document.getElementById(`scene-card-${id}`);
+    if (!node) return;
+    setIsExporting(true);
+    try {
+      await generateImageWithFonts(node, `Scene ${index + 1} - ${project?.name || "Kịch bản"}.png`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const exportAllScenesAsImages = async () => {
+    setIsExporting(true);
+    try {
+      const zip = new JSZip();
+      
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
+        const node = document.getElementById(`scene-card-${block.id}`);
+        if (node) {
+          const dataUrl = await generateImageWithFonts(node, "", true);
+          if (dataUrl) {
+            const base64Data = dataUrl.split(',')[1];
+            zip.file(`Scene ${i + 1} - ${project?.name || "Kịch bản"}.png`, base64Data, {base64: true});
+          }
+        }
+      }
+      
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, `${project?.name || "Kịch bản"} - All Scenes.zip`);
+    } catch (error) {
+      console.error("Lỗi tạo zip:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const copySceneToClipboard = async (id: string) => {
+    const node = document.getElementById(`scene-card-${id}`);
+    if (!node) return;
+    try {
+      const dataUrl = await generateImageWithFonts(node, "", true);
+      if (dataUrl) {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ]);
+      }
+    } catch (error) {
+      console.error("Lỗi copy:", error);
     }
   };
 
@@ -286,10 +370,23 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
           />
         </div>
         <div className="flex items-center gap-3">
-          <Button onClick={exportAsImage} disabled={isExporting} variant="outline" size="lg" className="h-12 px-6 text-base font-medium">
-            {isExporting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Download className="mr-2 h-5 w-5" />}
-            Xuất Ảnh
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button disabled={isExporting} variant="outline" size="lg" className="h-12 px-6 text-base font-medium" />}>
+              {isExporting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Download className="mr-2 h-5 w-5" />}
+              Xuất Ảnh
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={exportAsImage}>
+                <Download className="mr-2 h-4 w-4" />
+                <span>Xuất toàn bộ kịch bản</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportAllScenesAsImages}>
+                <Download className="mr-2 h-4 w-4" />
+                <span>Xuất lẻ từng phân cảnh</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={addBlock} size="lg" className="h-12 px-6 text-base font-medium">
             <Plus className="mr-2 h-5 w-5" /> Thêm Phân Cảnh
           </Button>
@@ -318,6 +415,8 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
                 onUpdateTime={updateTime} 
                 onUpdateField={updateField} 
                 onInsertAfter={insertBlockAfter}
+                onExportScene={exportSceneAsImage}
+                onCopyScene={copySceneToClipboard}
                 />
               ))}
             </div>

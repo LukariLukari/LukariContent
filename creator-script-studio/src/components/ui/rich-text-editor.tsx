@@ -121,10 +121,8 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         <div className="w-px h-4 bg-border/50 mx-1" />
 
         <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-sm" title="Màu chữ">
-              <Palette className="h-4 w-4" style={{ color: editor.getAttributes('textStyle').color || 'currentColor' }} />
-            </Button>
+          <PopoverTrigger render={<Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-sm" title="Màu chữ" />}>
+            <Palette className="h-4 w-4" style={{ color: editor.getAttributes('textStyle').color || 'currentColor' }} />
           </PopoverTrigger>
           <PopoverContent className="w-auto p-2" align="start">
             <div className="flex flex-wrap gap-1 max-w-[120px]">
