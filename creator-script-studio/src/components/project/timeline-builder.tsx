@@ -22,6 +22,7 @@ import { GripVertical, Plus, Trash2, Type, MessageSquare, MoveDown, Download, Lo
 import { toPng } from "html-to-image";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import ExcelJS from "exceljs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +33,16 @@ import { useProjects, ScriptBlock } from "@/hooks/use-projects";
 import { Montserrat } from "next/font/google";
 
 const montserrat = Montserrat({ subsets: ["latin"] });
+
+const stripHtml = (html: string) => {
+  if (!html) return "";
+  let text = html.replace(/<br\s*[\/]?>/gi, "\n");
+  text = text.replace(/<\/p>/gi, "\n");
+  text = text.replace(/<\/li>/gi, "\n");
+  const tmp = document.createElement("DIV");
+  tmp.innerHTML = text;
+  return (tmp.textContent || tmp.innerText || "").trim().replace(/\n{2,}/g, "\n");
+};
 
 function SortableBlock({ block, index, onDelete, onUpdateTime, onUpdateField, onInsertAfter, onExportScene, onCopyScene }: { block: any, index: number, onDelete: (id: string) => void, onUpdateTime: (id: string, newTime: string) => void, onUpdateField: (id: string, field: string, value: string) => void, onInsertAfter: (index: number) => void, onExportScene: (id: string, index: number) => void, onCopyScene: (id: string) => Promise<void> }) {
   const [copyState, setCopyState] = useState<'idle' | 'copying' | 'copied'>('idle');
@@ -346,6 +357,51 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
     }
   };
 
+  const exportAsExcel = async () => {
+    setIsExporting(true);
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Kịch Bản");
+
+      worksheet.columns = [
+        { header: "SCENE", key: "scene", width: 12 },
+        { header: "TIMELINE", key: "timeline", width: 15 },
+        { header: "PHỤ ĐỀ & GÓC MÁY", key: "camera", width: 35 },
+        { header: "HÀNH ĐỘNG & CẢM XÚC", key: "action", width: 35 },
+        { header: "THOẠI", key: "dialogue", width: 65 },
+      ];
+
+      blocks.forEach((block, index) => {
+        worksheet.addRow({
+          scene: `SCENE ${index + 1}`,
+          timeline: block.time || "",
+          camera: stripHtml(block.camera || ""),
+          action: stripHtml(block.action || ""),
+          dialogue: stripHtml(block.dialogue || "")
+        });
+      });
+
+      // Format headers
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true };
+      
+      // Wrap text for all rows
+      worksheet.eachRow((row) => {
+        row.eachCell((cell) => {
+          cell.alignment = { wrapText: true, vertical: "top" };
+        });
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      saveAs(blob, `${project?.name || "kich-ban"}.xlsx`);
+    } catch (error) {
+      console.error("Lỗi xuất Excel:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (!isLoaded || !project) {
     return <div className="text-muted-foreground p-8 text-center">Đang tải kịch bản...</div>;
   }
@@ -384,6 +440,11 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
               <DropdownMenuItem onClick={exportAllScenesAsImages}>
                 <Download className="mr-2 h-4 w-4" />
                 <span>Xuất lẻ từng phân cảnh</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={exportAsExcel}>
+                <Download className="mr-2 h-4 w-4" />
+                <span>Xuất ra Excel (.xlsx)</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
