@@ -21,8 +21,8 @@ export default function RootLayout({
       <body suppressHydrationWarning className={`${montserrat.className} min-h-screen antialiased bg-background text-foreground flex flex-col`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          forcedTheme="light"
+          defaultTheme="system"
+          enableSystem
           disableTransitionOnChange
         >
           <TooltipProvider>{children}</TooltipProvider>

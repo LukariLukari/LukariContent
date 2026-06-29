@@ -28,6 +28,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
+import { Edit2, Sparkles } from "lucide-react";
 
 import { useProjects, ScriptBlock } from "@/hooks/use-projects";
 import { Montserrat } from "next/font/google";
@@ -169,6 +171,8 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
   const blocks = project?.blocks || [];
   const containerRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [showDescription, setShowDescription] = useState(!!project?.description);
+  const [isEditingDesc, setIsEditingDesc] = useState(false);
 
   const setBlocks = (newBlocks: ScriptBlock[] | ((prev: ScriptBlock[]) => ScriptBlock[])) => {
     if (typeof newBlocks === "function") {
@@ -417,15 +421,49 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
             className="text-3xl font-bold bg-transparent border-none outline-none focus:ring-1 focus:ring-primary/50 rounded px-1 -ml-1 w-full max-w-2xl tracking-tight"
             placeholder="Tên kịch bản..."
           />
-          <input 
-            type="text"
-            value={project.description ?? "Kéo thả để sắp xếp lại phân cảnh. Yêu cầu AI Copilot tạo hoặc viết lại các khối."}
-            onChange={(e) => updateProjectDescription(project.id, e.target.value)}
-            className="text-base lg:text-lg text-muted-foreground mt-2 bg-transparent border-none outline-none focus:ring-1 focus:ring-primary/50 rounded px-1 -ml-1 w-full max-w-3xl block"
-            placeholder="Mô tả kịch bản..."
-          />
+          <div className="flex items-center gap-4 mt-3">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowDescription(!showDescription)}
+              className={showDescription ? "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-500/50" : "bg-orange-50/50 text-orange-600 border-orange-100 hover:bg-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/50 dark:hover:bg-orange-900/40"}
+            >
+              <Sparkles className="mr-2 h-4 w-4" /> 
+              {showDescription ? "Đóng Kế Hoạch AI" : "Xem Kế Hoạch AI / Ý tưởng"}
+            </Button>
+
+            <div className="flex items-center gap-2 ml-4">
+              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Trạng thái:</span>
+              <select 
+                value={project.status || "idea"}
+                onChange={(e) => updateProjectStatus(project.id, e.target.value as any)}
+                className="text-sm border border-border rounded px-2 py-1 bg-background"
+              >
+                <option value="idea">Ý tưởng</option>
+                <option value="scripting">Kịch bản</option>
+                <option value="pre_production">Chuẩn bị</option>
+                <option value="filming">Đang quay</option>
+                <option value="post_production">Hậu kỳ</option>
+                <option value="review">Chờ duyệt</option>
+                <option value="published">Đã đăng</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Ngày đăng:</span>
+              <input 
+                type="date"
+                value={project.publishDate || ""}
+                onChange={(e) => updateProjectPublishDate(project.id, e.target.value || undefined)}
+                className="text-sm border border-border rounded px-2 py-1 bg-background"
+              />
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="secondary" className="h-12 px-4 text-base font-medium bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 border border-indigo-500/20 shadow-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-5 w-5"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            AI Trợ lý (Sắp ra mắt)
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button disabled={isExporting} variant="outline" size="lg" className="h-12 px-6 text-base font-medium" />}>
               {isExporting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Download className="mr-2 h-5 w-5" />}
@@ -453,6 +491,32 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
           </Button>
         </div>
       </div>
+
+      {showDescription && (
+        <div className="mx-8 md:mx-12 mb-2 bg-orange-50/50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-500/60 rounded-xl p-6 shadow-md dark:shadow-orange-500/10 animate-in fade-in slide-in-from-top-4 duration-300">
+           <div className="flex justify-between items-center mb-4 border-b border-orange-100 dark:border-orange-500/30 pb-2">
+              <h3 className="font-semibold text-orange-900 dark:text-orange-200 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-orange-600 dark:text-orange-400 drop-shadow-sm" /> Kế hoạch Kịch bản / Gợi ý từ AI
+              </h3>
+              <Button size="sm" variant="ghost" onClick={() => setIsEditingDesc(!isEditingDesc)} className="text-orange-700 dark:text-orange-400 hover:text-orange-900 dark:hover:text-orange-200 hover:bg-orange-100/50 dark:hover:bg-orange-900/50">
+                 {isEditingDesc ? "Xem giao diện đẹp (Preview)" : <><Edit2 className="h-4 w-4 mr-2"/> Sửa thủ công</>}
+              </Button>
+           </div>
+           {isEditingDesc ? (
+             <Textarea 
+               className="min-h-[300px] font-mono text-sm bg-white dark:bg-card dark:text-foreground dark:border-border"
+               value={project.description || ""}
+               onChange={(e) => updateProjectDescription(project.id, e.target.value)}
+             />
+           ) : (
+             <div className="max-h-[500px] overflow-y-auto bg-white dark:bg-[#1a1a1c] p-6 rounded-lg border border-orange-50 dark:border-border/50 shadow-inner">
+               <div className="text-foreground">
+                 <MarkdownRenderer content={project.description || "Chưa có nội dung"} />
+               </div>
+             </div>
+           )}
+        </div>
+      )}
 
       <div className={`px-8 py-8 md:px-12 md:py-10 ${montserrat.className}`} ref={containerRef}>
         <div className="bg-paper p-6 md:p-8 rounded-2xl border border-border/40 shadow-sm">

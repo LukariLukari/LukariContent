@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FolderGit2, Video, BookOpen, Settings } from "lucide-react";
+import { Home, FolderGit2, Video, BookOpen, Settings, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: Home },
-  { name: "Projects", href: "/projects", icon: FolderGit2 },
-  { name: "Brands", href: "/brands", icon: Video },
-  { name: "Knowledge Base", href: "/knowledge", icon: BookOpen },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Tổng quan", href: "/", icon: Home },
+  { name: "Tiến độ (Kanban)", href: "/kanban", icon: FolderGit2 },
+  { name: "Lịch nội dung", href: "/calendar", icon: Video },
+  { name: "Báo cáo", href: "/analytics", icon: BookOpen },
+  { name: "AI Copilot", href: "/copilot", icon: Sparkles },
+  { name: "Cài đặt", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {

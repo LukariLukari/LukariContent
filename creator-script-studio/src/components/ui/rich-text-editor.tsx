@@ -79,7 +79,10 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   // Sync value if it changes from outside
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value);
+      // Only sync if not focused to prevent cursor jumping and typing lag
+      if (!editor.isFocused) {
+        editor.commands.setContent(value);
+      }
     }
   }, [value, editor]);
 
