@@ -36,9 +36,10 @@ const PROMPT_TEMPLATES = [
 Tôi vừa nhận được sản phẩm họa cụ sau: "${product || '[Tên sản phẩm họa cụ]'}".
 
 Nhiệm vụ của bạn:
-1. Gợi ý 3 concept video (ngắn dưới 60s) độc đáo, mang phong cách trending, aesthetic và thu hút người xem ngay từ 3 giây đầu.
-2. Với mỗi concept, trình bày rõ: Hook, Setup, Hành động, Hashtag và Nhạc nền.
-3. ${JSON_INSTRUCTION}`
+1. Gợi ý 5 concept video (ngắn dưới 60s) độc đáo, mang phong cách trending, aesthetic.
+2. ĐẶC BIỆT CHÚ TRỌNG VÀO CÂU HOOK (3 giây đầu): Câu Hook phải cực kỳ hấp dẫn, giật gân, khơi gợi sự tò mò mạnh mẽ hoặc đánh trúng tâm lý người xem để giữ chân họ ngay lập tức.
+3. Với mỗi concept, trình bày rõ: Câu Hook chi tiết (chính xác từng chữ sẽ nói/viết), Setup, Hành động, Hashtag và Nhạc nền.
+4. ${JSON_INSTRUCTION}`
   },
   {
     id: "script",
@@ -137,7 +138,7 @@ export default function CopilotPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-indigo-500" />
-            Trợ lý AI Copilot
+            Trợ lý AI content
           </h1>
           <p className="text-muted-foreground mt-1">
             Bộ công cụ tạo Prompt và phân tích kết quả trả về từ Google Gemini.

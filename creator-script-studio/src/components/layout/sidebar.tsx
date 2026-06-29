@@ -10,7 +10,7 @@ const navigation = [
   { name: "Tiến độ (Kanban)", href: "/kanban", icon: FolderGit2 },
   { name: "Lịch nội dung", href: "/calendar", icon: Video },
   { name: "Báo cáo", href: "/analytics", icon: BookOpen },
-  { name: "AI Copilot", href: "/copilot", icon: Sparkles },
+  { name: "AI content", href: "/copilot", icon: Sparkles },
   { name: "Cài đặt", href: "/settings", icon: Settings },
 ];
 

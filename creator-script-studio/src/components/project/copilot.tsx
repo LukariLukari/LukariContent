@@ -18,7 +18,7 @@ export function CopilotSidebar({ onClose }: { onClose?: () => void }) {
     {
       id: "1",
       role: "ai",
-      content: "Hi! I'm your AI Copilot. I can help you write dialogue, rewrite hooks, or generate new ideas for your timeline. What do you need help with?"
+      content: "Hi! I'm your AI content assistant. I can help you write dialogue, rewrite hooks, or generate new ideas for your timeline. What do you need help with?"
     }
   ]);
   const [input, setInput] = useState("");
@@ -47,7 +47,7 @@ export function CopilotSidebar({ onClose }: { onClose?: () => void }) {
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <h3 className="font-semibold text-sm">AI Copilot</h3>
+          <h3 className="font-semibold text-sm">AI content</h3>
         </div>
         {onClose && (
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
@@ -75,7 +75,7 @@ export function CopilotSidebar({ onClose }: { onClose?: () => void }) {
                   <Bot className="h-3 w-3 opacity-70" />
                 )}
                 <span className="text-[10px] uppercase font-bold opacity-70">
-                  {msg.role === "user" ? "You" : "Copilot"}
+                  {msg.role === "user" ? "You" : "AI content"}
                 </span>
               </div>
               <p className="leading-relaxed">{msg.content}</p>
@@ -85,7 +85,7 @@ export function CopilotSidebar({ onClose }: { onClose?: () => void }) {
             <div className="flex w-max max-w-[85%] flex-col gap-2 rounded-xl px-4 py-3 text-sm bg-secondary text-secondary-foreground">
               <div className="flex items-center gap-2">
                 <Bot className="h-3 w-3 opacity-70" />
-                <span className="text-[10px] uppercase font-bold opacity-70">Copilot is thinking...</span>
+                <span className="text-[10px] uppercase font-bold opacity-70">AI content is thinking...</span>
               </div>
               <div className="flex gap-1 mt-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-foreground/40 animate-bounce"></span>
