@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FolderGit2, Video, BookOpen, Settings, Sparkles } from "lucide-react";
+import { Home, FolderGit2, Video, BookOpen, Settings, Sparkles, Target, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Tổng quan", href: "/", icon: Home },
+  { name: "Ngân hàng ý tưởng", href: "/ideas", icon: Lightbulb },
+  { name: "Lộ trình (Roadmap)", href: "/roadmap", icon: Target },
   { name: "Tiến độ (Kanban)", href: "/kanban", icon: FolderGit2 },
   { name: "Lịch nội dung", href: "/calendar", icon: Video },
   { name: "Báo cáo", href: "/analytics", icon: BookOpen },

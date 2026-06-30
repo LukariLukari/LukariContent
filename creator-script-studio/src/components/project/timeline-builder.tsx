@@ -18,7 +18,7 @@ import {
   useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, Trash2, Type, MessageSquare, MoveDown, Download, Loader2, ChevronDown, Copy, Check } from "lucide-react";
+import { GripVertical, Plus, Trash2, Type, MessageSquare, MoveDown, Download, Loader2, ChevronDown, Copy, Check, ListTodo, BarChart, Wand2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -31,7 +31,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { Edit2, Sparkles } from "lucide-react";
 
-import { useProjects, ScriptBlock } from "@/hooks/use-projects";
+import { useProjects, ScriptBlock, ProjectTask, ProjectMetrics } from "@/hooks/use-projects";
 import { Montserrat } from "next/font/google";
 
 const montserrat = Montserrat({ subsets: ["latin"] });
@@ -173,6 +173,44 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
   const [isExporting, setIsExporting] = useState(false);
   const [showDescription, setShowDescription] = useState(!!project?.description);
   const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [showTasks, setShowTasks] = useState(false);
+  const [showMetrics, setShowMetrics] = useState(false);
+
+  const handleParseJSON = () => {
+    if (!project?.description) return;
+    
+    try {
+      // Try to extract JSON array from text
+      const match = project.description.match(/\[\s*\{[\s\S]*\}\s*\]/);
+      if (match) {
+        const data = JSON.parse(match[0]);
+        if (Array.isArray(data) && data.length > 0) {
+          const newBlocks = data.map((item, index) => ({
+            id: `block-ai-${Date.now()}-${index}`,
+            time: item.time || "Xs - Ys",
+            camera: item.camera || "",
+            action: item.action || "",
+            dialogue: item.dialogue || "",
+            visual: "",
+            caption: "",
+            emotion: ""
+          }));
+          
+          if (confirm(`Tìm thấy ${newBlocks.length} phân cảnh. Bạn muốn ghi đè toàn bộ kịch bản hiện tại (OK) hay thêm vào cuối (Cancel)?`)) {
+            setBlocks(newBlocks);
+          } else {
+            setBlocks([...blocks, ...newBlocks]);
+          }
+          setIsEditingDesc(false);
+          return;
+        }
+      }
+      alert("Không tìm thấy dữ liệu JSON hợp lệ trong đoạn văn bản. Vui lòng đảm bảo bạn copy chuẩn mảng JSON [ { ... } ].");
+    } catch (e) {
+      console.error(e);
+      alert("Lỗi phân tích JSON. Vui lòng kiểm tra lại cú pháp.");
+    }
+  };
 
   const setBlocks = (newBlocks: ScriptBlock[] | ((prev: ScriptBlock[]) => ScriptBlock[])) => {
     if (typeof newBlocks === "function") {
@@ -429,8 +467,28 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
               className={showDescription ? "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-500/50" : "bg-orange-50/50 text-orange-600 border-orange-100 hover:bg-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/50 dark:hover:bg-orange-900/40"}
             >
               <Sparkles className="mr-2 h-4 w-4" /> 
-              {showDescription ? "Đóng Kế Hoạch AI" : "Xem Kế Hoạch AI / Ý tưởng"}
+              {showDescription ? "Đóng Kế Hoạch AI" : "Kế Hoạch AI / Ý tưởng"}
             </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTasks(!showTasks)}
+              className={showTasks ? "bg-blue-100 text-blue-700 border-blue-200" : "text-blue-600 hover:bg-blue-50 border-blue-100"}
+            >
+              <ListTodo className="mr-2 h-4 w-4" /> Checklist
+            </Button>
+
+            {project.status === "published" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMetrics(!showMetrics)}
+                className={showMetrics ? "bg-pink-100 text-pink-700 border-pink-200" : "text-pink-600 hover:bg-pink-50 border-pink-100"}
+              >
+                <BarChart className="mr-2 h-4 w-4" /> Chỉ số
+              </Button>
+            )}
 
             <div className="flex items-center gap-2 ml-4">
               <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Trạng thái:</span>
@@ -498,9 +556,16 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
               <h3 className="font-semibold text-orange-900 dark:text-orange-200 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-orange-600 dark:text-orange-400 drop-shadow-sm" /> Kế hoạch Kịch bản / Gợi ý từ AI
               </h3>
-              <Button size="sm" variant="ghost" onClick={() => setIsEditingDesc(!isEditingDesc)} className="text-orange-700 dark:text-orange-400 hover:text-orange-900 dark:hover:text-orange-200 hover:bg-orange-100/50 dark:hover:bg-orange-900/50">
-                 {isEditingDesc ? "Xem giao diện đẹp (Preview)" : <><Edit2 className="h-4 w-4 mr-2"/> Sửa thủ công</>}
-              </Button>
+              <div className="flex gap-2">
+                {isEditingDesc && (
+                  <Button size="sm" variant="default" onClick={handleParseJSON} className="bg-orange-600 hover:bg-orange-700 text-white">
+                    <Wand2 className="h-4 w-4 mr-2"/> Tạo Phân Cảnh từ JSON
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => setIsEditingDesc(!isEditingDesc)} className="text-orange-700 dark:text-orange-400 hover:text-orange-900 dark:hover:text-orange-200 hover:bg-orange-100/50 dark:hover:bg-orange-900/50">
+                   {isEditingDesc ? "Xem giao diện đẹp (Preview)" : <><Edit2 className="h-4 w-4 mr-2"/> Sửa thủ công</>}
+                </Button>
+              </div>
            </div>
            {isEditingDesc ? (
              <Textarea 
@@ -515,6 +580,102 @@ export function TimelineBuilder({ projectId }: { projectId: string }) {
                </div>
              </div>
            )}
+        </div>
+      )}
+
+      {showTasks && (
+        <div className="mx-8 md:mx-12 mb-2 bg-blue-50/50 border border-blue-200 rounded-xl p-6 shadow-md">
+          <div className="flex justify-between items-center mb-4 border-b border-blue-100 pb-2">
+            <h3 className="font-semibold text-blue-900 flex items-center gap-2">
+              <ListTodo className="h-5 w-5 text-blue-600" /> Checklist Triển khai
+            </h3>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="text-blue-600 border-blue-200"
+              onClick={() => {
+                const newTask = { id: `task-${Date.now()}`, title: "Công việc mới", completed: false };
+                updateProjectTasks(project.id, [...(project.tasks || []), newTask]);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" /> Thêm công việc
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {(!project.tasks || project.tasks.length === 0) ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Chưa có công việc nào. Thêm các việc cần làm (như Quay cảnh 1, Thu âm, Dựng video...).</p>
+            ) : (
+              project.tasks.map((task, idx) => (
+                <div key={task.id} className="flex items-center gap-3 bg-white p-2 rounded-md border shadow-sm">
+                  <input 
+                    type="checkbox" 
+                    checked={task.completed}
+                    onChange={(e) => {
+                      const newTasks = [...project.tasks!];
+                      newTasks[idx].completed = e.target.checked;
+                      updateProjectTasks(project.id, newTasks);
+                    }}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <input
+                    type="text"
+                    value={task.title}
+                    onChange={(e) => {
+                      const newTasks = [...project.tasks!];
+                      newTasks[idx].title = e.target.value;
+                      updateProjectTasks(project.id, newTasks);
+                    }}
+                    className={`flex-1 text-sm bg-transparent border-none outline-none ${task.completed ? 'line-through text-muted-foreground' : ''}`}
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                    onClick={() => {
+                      updateProjectTasks(project.id, project.tasks!.filter(t => t.id !== task.id));
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {showMetrics && project.status === "published" && (
+        <div className="mx-8 md:mx-12 mb-2 bg-pink-50/50 border border-pink-200 rounded-xl p-6 shadow-md">
+          <div className="flex justify-between items-center mb-4 border-b border-pink-100 pb-2">
+            <h3 className="font-semibold text-pink-900 flex items-center gap-2">
+              <BarChart className="h-5 w-5 text-pink-600" /> Cập nhật Chỉ số Video
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {[
+              { key: 'views', label: 'Lượt xem (Views)' },
+              { key: 'likes', label: 'Lượt thích (Likes)' },
+              { key: 'comments', label: 'Bình luận' },
+              { key: 'shares', label: 'Chia sẻ' },
+              { key: 'conversions', label: 'Chuyển đổi/Lead' }
+            ].map(metric => (
+              <div key={metric.key} className="space-y-1">
+                <label className="text-xs font-semibold text-pink-800">{metric.label}</label>
+                <input
+                  type="number"
+                  value={project.metrics?.[metric.key as keyof ProjectMetrics] || ""}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    updateProjectMetrics(project.id, {
+                      ...(project.metrics || { views: 0, likes: 0, shares: 0, comments: 0, conversions: 0 }),
+                      [metric.key]: val
+                    });
+                  }}
+                  className="w-full border border-pink-200 rounded-md px-3 py-2 text-sm bg-white"
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -19,10 +19,10 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           strong: ({node, ...props}) => <strong className="font-bold text-indigo-700 dark:text-indigo-400" {...props} />,
           ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-1" {...props} />,
           ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-1" {...props} />,
-          li: ({node, ...props}) => <li className="text-muted-foreground" {...props} />,
-          p: ({node, ...props}) => <p className="mb-4 text-muted-foreground leading-relaxed" {...props} />,
+          li: ({node, ...props}) => <li className="text-foreground" {...props} />,
+          p: ({node, ...props}) => <p className="mb-4 text-foreground leading-relaxed" {...props} />,
           code: ({node, ...props}) => <code className="bg-secondary px-1.5 py-0.5 rounded text-sm font-mono text-indigo-600" {...props} />,
-          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-indigo-500 pl-4 italic text-muted-foreground my-4 bg-indigo-500/5 py-2 pr-4 rounded-r-lg" {...props} />,
+          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-indigo-500 pl-4 italic text-foreground my-4 bg-indigo-500/5 py-2 pr-4 rounded-r-lg" {...props} />,
         }}
       >
         {content}
