@@ -14,7 +14,8 @@ import { cn } from "@/lib/utils";
 export default function RoadmapPage() {
   const useProjectsHook = useProjects();
   const { campaigns, projects, isLoaded: isProjectsLoaded, createCampaign, deleteCampaign, addProjectToCampaign, removeProjectFromCampaign, addIdeaToCampaign, removeIdeaFromCampaign } = useProjectsHook;
-  const { ideas, isLoaded: isIdeasLoaded } = useIdeas();
+  const useIdeasHook = useIdeas();
+  const { ideas, isLoaded: isIdeasLoaded } = useIdeasHook;
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState("");
@@ -165,6 +166,7 @@ export default function RoadmapPage() {
                     ideas={ideas} 
                     projects={projects} 
                     useProjectsHook={useProjectsHook} 
+                    useIdeasHook={useIdeasHook}
                   />
                 </div>
               </Card>

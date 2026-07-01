@@ -25,7 +25,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
-import { Plus, GripVertical, Trash2, Lightbulb, ChevronRight, PenSquare, LayoutList, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, GripVertical, Trash2, Lightbulb, PenSquare, LayoutList } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -33,11 +33,12 @@ import { cn } from "@/lib/utils";
 
 // Sortable Idea Item
 function SortableIdeaItem({ idea, onRemove }: { idea: Idea, onRemove: () => void }) {
+  const isCustom = idea.id.startsWith("custom:");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: idea.id,
     data: {
       type: "Idea",
-      idea,
+      idea
     }
   });
 
@@ -51,7 +52,10 @@ function SortableIdeaItem({ idea, onRemove }: { idea: Idea, onRemove: () => void
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center justify-between p-3 mb-2 bg-background border border-l-4 border-l-orange-500 rounded-md shadow-sm group",
+        "flex items-center justify-between p-3 mb-2 rounded-md shadow-sm group border",
+        isCustom 
+          ? "bg-muted/30 border-dashed border-muted-foreground/30 text-foreground" 
+          : "bg-background border-l-4 border-l-orange-500 border-border",
         isDragging && "opacity-50 ring-2 ring-primary"
       )}
     >
@@ -60,18 +64,23 @@ function SortableIdeaItem({ idea, onRemove }: { idea: Idea, onRemove: () => void
           <GripVertical className="h-4 w-4" />
         </button>
         <div 
-          className="flex-1 truncate pr-2 cursor-pointer select-none group/text"
-          onClick={() => window.open("/ideas", "_blank")}
-          title="Đến Ngân hàng ý tưởng"
+          className={cn("flex-1 truncate pr-2 select-none group/text", !isCustom && "cursor-pointer")}
+          onClick={() => { if (!isCustom) window.open("/ideas", "_blank"); }}
+          title={isCustom ? undefined : "Đến Ngân hàng ý tưởng"}
         >
-          <p className="text-sm font-medium truncate group-hover/text:text-orange-500 transition-colors">
+          <p className={cn(
+            "text-sm truncate transition-colors", 
+            isCustom ? "font-normal italic" : "font-medium group-hover/text:text-orange-500"
+          )}>
             {idea.hook || idea.content || "Ý tưởng trống"}
           </p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-              {idea.platform} • {idea.contentType}
-            </p>
-          </div>
+          {!isCustom && (
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                {idea.platform} • {idea.contentType}
+              </p>
+            </div>
+          )}
         </div>
       </div>
       <Button 
@@ -95,7 +104,8 @@ function SortablePhase({
   onAddIdea, 
   onRemoveIdea, 
   onDeletePhase, 
-  onRenamePhase 
+  onRenamePhase,
+  onQuickAddIdea 
 }: { 
   phase: CampaignPhase, 
   ideas: Idea[], 
@@ -103,8 +113,12 @@ function SortablePhase({
   onAddIdea: (ideaId: string) => void,
   onRemoveIdea: (ideaId: string) => void,
   onDeletePhase: () => void,
-  onRenamePhase: () => void
+  onRenamePhase: () => void,
+  onQuickAddIdea: (text: string) => void
 }) {
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
+  const [quickAddText, setQuickAddText] = useState("");
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: phase.id,
     data: {
@@ -117,8 +131,6 @@ function SortablePhase({
     transform: CSS.Transform.toString(transform),
     transition,
   };
-
-  const phaseIdeas = phase.ideaIds.map(id => ideas.find(i => i.id === id)).filter(Boolean) as Idea[];
 
   return (
     <div
@@ -148,6 +160,15 @@ function SortablePhase({
         </div>
 
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 px-3 text-xs font-semibold rounded-full bg-background hover:bg-secondary border-dashed"
+            onClick={() => { setIsQuickAdding(true); setQuickAddText(""); }}
+          >
+            <PenSquare className="h-3 w-3 mr-1.5" /> Nhập nhanh
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-full border-none text-xs font-semibold transition-all hover:shadow-md h-8 px-4 bg-asphalt !text-white hover:bg-[#1a1d1f] shadow-sm">
               <Plus className="h-3.5 w-3.5 mr-1.5" /> Thêm Ý tưởng
@@ -180,28 +201,80 @@ function SortablePhase({
       <div className="pl-8">
         <SortableContext items={phase.ideaIds} strategy={verticalListSortingStrategy}>
           <div className="min-h-[50px]">
-            {phaseIdeas.length === 0 ? (
-              <div className="text-sm text-muted-foreground italic p-4 border border-dashed rounded-md bg-background/50 text-center flex flex-col items-center justify-center gap-2">
-                <Lightbulb className="h-5 w-5 opacity-20" />
-                Chưa có ý tưởng nào trong lộ trình này.
-              </div>
-            ) : (
-              phaseIdeas.map(idea => (
-                <SortableIdeaItem 
-                  key={idea.id} 
-                  idea={idea} 
-                  onRemove={() => onRemoveIdea(idea.id)} 
-                />
-              ))
-            )}
+                    {phase.ideaIds.length === 0 ? (
+                      <div className="text-center p-6 border-2 border-dashed rounded-md bg-muted/20 text-muted-foreground">
+                        <Lightbulb className="h-6 w-6 mx-auto mb-2 opacity-20" />
+                        <p className="text-sm">Chưa có ý tưởng nào trong lộ trình này.</p>
+                      </div>
+                    ) : (
+                      phase.ideaIds.map((id) => {
+                        let idea: Idea;
+                        if (id.startsWith("custom:")) {
+                          const separatorIndex = id.indexOf("::");
+                          idea = {
+                            id,
+                            hook: id.substring(separatorIndex + 2),
+                            content: "",
+                            platform: "Tất cả", // Required by type, not used due to isCustom check
+                            contentType: "Khác",
+                            order: 0,
+                            details: "",
+                            createdAt: new Date().toISOString()
+                          };
+                        } else {
+                          const found = ideas.find(i => i.id === id);
+                          if (!found) return null;
+                          idea = found;
+                        }
+
+                        return (
+                          <SortableIdeaItem 
+                            key={idea.id} 
+                            idea={idea} 
+                            onRemove={() => onRemoveIdea(idea.id)}
+                          />
+                        );
+                      })
+                    )}
           </div>
         </SortableContext>
+        
+        {isQuickAdding && (
+          <div className="mt-3 p-3 bg-background border border-orange-500/50 rounded-md shadow-sm">
+            <Input 
+              autoFocus
+              placeholder="Nhập tiêu đề ý tưởng (Hook)..."
+              value={quickAddText}
+              onChange={(e) => setQuickAddText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && quickAddText.trim()) {
+                  onQuickAddIdea(quickAddText.trim());
+                  setIsQuickAdding(false);
+                  setQuickAddText("");
+                } else if (e.key === "Escape") {
+                  setIsQuickAdding(false);
+                }
+              }}
+              className="h-8 text-sm mb-2"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsQuickAdding(false)}>Hủy</Button>
+              <Button size="sm" className="h-7 text-xs bg-orange-500 hover:bg-orange-600 text-white" onClick={() => {
+                if (quickAddText.trim()) {
+                  onQuickAddIdea(quickAddText.trim());
+                  setIsQuickAdding(false);
+                  setQuickAddText("");
+                }
+              }}>Lưu</Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-export function CampaignBoard({ campaign, ideas, projects, useProjectsHook }: { campaign: Campaign, ideas: Idea[], projects: any[], useProjectsHook: any }) {
+export function CampaignBoard({ campaign, ideas, projects, useProjectsHook, useIdeasHook }: { campaign: Campaign, ideas: Idea[], projects: any[], useProjectsHook: any, useIdeasHook?: any }) {
   const { addPhase, updatePhaseOrder, deletePhase, renamePhase, addIdeaToPhase, removeIdeaFromPhase, moveIdeaBetweenPhases } = useProjectsHook;
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<"Phase" | "Idea" | null>(null);
@@ -364,6 +437,10 @@ export function CampaignBoard({ campaign, ideas, projects, useProjectsHook }: { 
                   onRenamePhase={() => {
                     setRenamePhaseId(phase.id);
                     setRenamePhaseName(phase.name);
+                  }}
+                  onQuickAddIdea={(text) => {
+                    const customId = `custom:${Date.now()}::${text}`;
+                    addIdeaToPhase(campaign.id, phase.id, customId);
                   }}
                 />
               ))}

@@ -62,7 +62,7 @@ export function useIdeas() {
     }, 500);
   };
 
-  const addIdea = () => {
+  const addIdea = (initialData?: Partial<Idea>) => {
     const newIdea: Idea = {
       id: `idea-${Date.now()}`,
       order: ideas.length > 0 ? Math.max(...ideas.map(i => i.order)) + 1 : 1,
@@ -71,7 +71,8 @@ export function useIdeas() {
       content: "",
       hook: "",
       details: "",
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...initialData
     };
     saveIdeas([...ideas, newIdea], true);
     return newIdea;
