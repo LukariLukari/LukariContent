@@ -134,23 +134,31 @@ export function useProjects() {
       if (supabase) {
         try {
           const { data: cloudProjects, error } = await supabase.from('projects').select('*');
-          if (!error && cloudProjects && cloudProjects.length > 0) {
-            console.log("Loaded Cloud projects:", cloudProjects.length);
-            setProjects(cloudProjects);
-            localStorage.setItem("creator-projects", JSON.stringify(cloudProjects));
-          } else if (!error && cloudProjects?.length === 0 && localProjects.length > 0) {
-            console.log("Cloud projects is empty. Pushing local data to Supabase...");
-            await supabase.from('projects').upsert(localProjects);
+          if (!error && cloudProjects) {
+            const mergedProjects = [...localProjects];
+            const localProjIds = new Set(localProjects.map(p => p.id));
+            for (const cp of cloudProjects) {
+              if (!localProjIds.has(cp.id)) mergedProjects.push(cp);
+            }
+            if (cloudProjects.length < localProjects.length || cloudProjects.length === 0) {
+              await supabase.from('projects').upsert(mergedProjects);
+            }
+            setProjects(mergedProjects);
+            localStorage.setItem("creator-projects", JSON.stringify(mergedProjects));
           }
 
           const { data: cloudCampaigns, error: campError } = await supabase.from('campaigns').select('*');
-          if (!campError && cloudCampaigns && cloudCampaigns.length > 0) {
-            console.log("Loaded Cloud campaigns:", cloudCampaigns.length);
-            setCampaigns(cloudCampaigns);
-            localStorage.setItem("creator-campaigns", JSON.stringify(cloudCampaigns));
-          } else if (!campError && cloudCampaigns?.length === 0 && localCampaigns.length > 0) {
-            console.log("Cloud campaigns is empty. Pushing local data to Supabase...");
-            await supabase.from('campaigns').upsert(localCampaigns);
+          if (!campError && cloudCampaigns) {
+            const mergedCampaigns = [...localCampaigns];
+            const localCampIds = new Set(localCampaigns.map(c => c.id));
+            for (const cc of cloudCampaigns) {
+              if (!localCampIds.has(cc.id)) mergedCampaigns.push(cc);
+            }
+            if (cloudCampaigns.length < localCampaigns.length || cloudCampaigns.length === 0) {
+              await supabase.from('campaigns').upsert(mergedCampaigns);
+            }
+            setCampaigns(mergedCampaigns);
+            localStorage.setItem("creator-campaigns", JSON.stringify(mergedCampaigns));
           }
         } catch (err) {
           console.error("Supabase sync error:", err);

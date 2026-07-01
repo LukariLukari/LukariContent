@@ -56,13 +56,28 @@ export function useIdeas() {
       if (supabase) {
         try {
           const { data: cloudIdeas, error } = await supabase.from('ideas').select('*');
-          if (!error && cloudIdeas && cloudIdeas.length > 0) {
-            console.log("Loaded Cloud ideas:", cloudIdeas.length);
-            setIdeas(cloudIdeas);
-            localStorage.setItem("creator-ideas", JSON.stringify(cloudIdeas));
-          } else if (!error && cloudIdeas?.length === 0 && localIdeas.length > 0) {
-            console.log("Cloud ideas is empty. Pushing local data to Supabase...");
-            await supabase.from('ideas').upsert(localIdeas);
+          if (!error && cloudIdeas) {
+            // Hợp nhất dữ liệu: Ưu tiên dữ liệu local nếu nó chưa có trên cloud, 
+            // hoặc gộp cả hai lại. Ở đây ta gộp theo ID để không bị trùng.
+            const mergedIdeas = [...localIdeas];
+            const localIds = new Set(localIdeas.map(i => i.id));
+            
+            let hasNewCloudData = false;
+            for (const cIdea of cloudIdeas) {
+              if (!localIds.has(cIdea.id)) {
+                mergedIdeas.push(cIdea);
+                hasNewCloudData = true;
+              }
+            }
+
+            // Nếu Cloud trống hoặc ít dữ liệu hơn Local, ta đẩy toàn bộ lên Cloud
+            if (cloudIdeas.length < localIdeas.length || cloudIdeas.length === 0) {
+              console.log("Pushing missing local ideas to Cloud...");
+              await supabase.from('ideas').upsert(mergedIdeas);
+            }
+
+            setIdeas(mergedIdeas);
+            localStorage.setItem("creator-ideas", JSON.stringify(mergedIdeas));
           }
         } catch (err) {
           console.error("Supabase sync error for ideas:", err);
