@@ -137,8 +137,16 @@ export function useProjects() {
           if (!error && cloudProjects && cloudProjects.length > 0) {
             console.log("Cloud projects:", cloudProjects.length);
           } else if (!error && cloudProjects?.length === 0 && localProjects.length > 0) {
-            console.log("Cloud is empty. Pushing local data to Supabase...");
+            console.log("Cloud projects is empty. Pushing local data to Supabase...");
             await supabase.from('projects').upsert(localProjects);
+          }
+
+          const { data: cloudCampaigns, error: campError } = await supabase.from('campaigns').select('*');
+          if (!campError && cloudCampaigns && cloudCampaigns.length > 0) {
+            console.log("Cloud campaigns:", cloudCampaigns.length);
+          } else if (!campError && cloudCampaigns?.length === 0 && localCampaigns.length > 0) {
+            console.log("Cloud campaigns is empty. Pushing local data to Supabase...");
+            await supabase.from('campaigns').upsert(localCampaigns);
           }
         } catch (err) {
           console.error("Supabase sync error:", err);
@@ -240,9 +248,16 @@ export function useProjects() {
     return projects.find(p => p.id === id);
   };
 
-  const saveCampaigns = (newCampaigns: Campaign[]) => {
+  const saveCampaigns = async (newCampaigns: Campaign[]) => {
     setCampaigns(newCampaigns);
     localStorage.setItem("creator-campaigns", JSON.stringify(newCampaigns));
+    if (supabase) {
+      try {
+        await supabase.from('campaigns').upsert(newCampaigns);
+      } catch (e) {
+        console.error("Failed to save campaigns to Supabase", e);
+      }
+    }
   };
 
   const createCampaign = (name: string, goal: CampaignGoal) => {

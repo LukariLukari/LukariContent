@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export type PlatformType = "Gốc (TikTok/FB/Rednote)" | "Reup (YT/Insta)" | "Tất cả";
 export type ContentType = "Storytelling" | "Review" | "Tutorial" | "Drama" | "Giải trí" | "Khác";
@@ -21,45 +22,83 @@ export function useIdeas() {
   const [isLoaded, setIsLoaded] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout>();
 
+  const supabase = createClient();
+
   useEffect(() => {
-    const saved = localStorage.getItem("creator-ideas");
-    if (saved) {
-      try {
-        setIdeas(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse ideas", e);
-      }
-    } else {
-      // Create some default ideas
-      setIdeas([
-        {
-          id: `idea-${Date.now()}-1`,
-          order: 1,
-          platform: "Gốc (TikTok/FB/Rednote)",
-          contentType: "Review",
-          content: "Review bộ màu nước Mijello 36 màu",
-          hook: "Đừng mua bộ màu này nếu bạn sợ... nghiện!",
-          details: "Tập trung quay macro chất màu, swatches trên giấy vân lạnh.",
-          createdAt: new Date().toISOString()
+    const loadData = async () => {
+      let localIdeas: Idea[] = [];
+      const saved = localStorage.getItem("creator-ideas");
+      
+      if (saved) {
+        try {
+          localIdeas = JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to parse ideas", e);
         }
-      ]);
-    }
-    setIsLoaded(true);
+      } else {
+        localIdeas = [
+          {
+            id: `idea-${Date.now()}-1`,
+            order: 1,
+            platform: "Gốc (TikTok/FB/Rednote)",
+            contentType: "Review",
+            content: "Review bộ màu nước Mijello 36 màu",
+            hook: "Đừng mua bộ màu này nếu bạn sợ... nghiện!",
+            details: "Tập trung quay macro chất màu, swatches trên giấy vân lạnh.",
+            createdAt: new Date().toISOString()
+          }
+        ];
+      }
+      
+      setIdeas(localIdeas);
+      setIsLoaded(true);
+
+      if (supabase) {
+        try {
+          const { data: cloudIdeas, error } = await supabase.from('ideas').select('*');
+          if (!error && cloudIdeas && cloudIdeas.length > 0) {
+            console.log("Cloud ideas:", cloudIdeas.length);
+          } else if (!error && cloudIdeas?.length === 0 && localIdeas.length > 0) {
+            console.log("Cloud ideas is empty. Pushing local data to Supabase...");
+            await supabase.from('ideas').upsert(localIdeas);
+          }
+        } catch (err) {
+          console.error("Supabase sync error for ideas:", err);
+        }
+      }
+    };
+    
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const saveIdeas = (newIdeas: Idea[], immediate = false) => {
+  const saveIdeas = async (newIdeas: Idea[], immediate = false) => {
     setIdeas(newIdeas);
     
     if (immediate) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       localStorage.setItem("creator-ideas", JSON.stringify(newIdeas));
+      if (supabase) {
+        try {
+          await supabase.from('ideas').upsert(newIdeas);
+        } catch (e) {
+          console.error("Failed to save ideas to Supabase", e);
+        }
+      }
       return;
     }
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
+    timeoutRef.current = setTimeout(async () => {
       localStorage.setItem("creator-ideas", JSON.stringify(newIdeas));
-    }, 500);
+      if (supabase) {
+        try {
+          await supabase.from('ideas').upsert(newIdeas);
+        } catch (e) {
+          console.error("Failed to save ideas to Supabase", e);
+        }
+      }
+    }, 1000);
   };
 
   const addIdea = (initialData?: Partial<Idea>) => {

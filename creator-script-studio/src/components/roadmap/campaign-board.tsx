@@ -25,7 +25,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
-import { Plus, GripVertical, Trash2, Lightbulb, PenSquare, LayoutList } from "lucide-react";
+import { Plus, GripVertical, Trash2, Lightbulb, PenSquare, LayoutList, ChevronRight, ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -60,9 +60,6 @@ function SortableIdeaItem({ idea, onRemove }: { idea: Idea, onRemove: () => void
       )}
     >
       <div className="flex items-center gap-2 overflow-hidden flex-1">
-        <button className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0" {...attributes} {...listeners}>
-          <GripVertical className="h-4 w-4" />
-        </button>
         <div 
           className={cn("flex-1 truncate pr-2 select-none group/text", !isCustom && "cursor-pointer")}
           onClick={() => { if (!isCustom) window.open("/ideas", "_blank"); }}
@@ -83,15 +80,20 @@ function SortableIdeaItem({ idea, onRemove }: { idea: Idea, onRemove: () => void
           )}
         </div>
       </div>
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-        onClick={onRemove}
-        title="Gỡ khỏi lộ trình"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      <div className="flex items-center gap-1 shrink-0">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          onClick={onRemove}
+          title="Gỡ khỏi lộ trình"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+        <button className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0 p-1 rounded-md hover:bg-secondary" {...attributes} {...listeners}>
+          <GripVertical className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -113,11 +115,14 @@ function SortablePhase({
   onAddIdea: (ideaId: string) => void,
   onRemoveIdea: (ideaId: string) => void,
   onDeletePhase: () => void,
-  onRenamePhase: () => void,
+  onRenamePhase: (name: string) => void,
   onQuickAddIdea: (text: string) => void
 }) {
   const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [quickAddText, setQuickAddText] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameText, setRenameText] = useState(phase.name);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: phase.id,
@@ -132,50 +137,72 @@ function SortablePhase({
     transition,
   };
 
+  const handleRename = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (renameText.trim()) {
+      onRenamePhase(renameText.trim());
+      setIsRenaming(false);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "bg-secondary/20 border border-dashed rounded-xl p-4 mb-4",
-        isDragging && "opacity-50 border-primary"
+        "bg-secondary/10 border rounded-lg overflow-hidden mb-4 group/phase transition-colors hover:border-orange-500/30",
+        isDragging && "opacity-50 ring-2 ring-primary"
       )}
     >
-      <div className="flex items-center justify-between mb-4 group/header">
-        <div className="flex items-center gap-2">
-          <button className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-secondary" {...attributes} {...listeners}>
-            <GripVertical className="h-5 w-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-lg">{phase.order}. {phase.name}</span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 opacity-0 group-hover/header:opacity-100 transition-opacity"
-              onClick={onRenamePhase}
+      <div className="flex items-center justify-between py-2 px-3 bg-background border-b group/header">
+        <div className="flex items-center gap-2 overflow-hidden flex-1 pr-2">
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 text-muted-foreground shrink-0 -ml-1" 
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </Button>
+
+          {isRenaming ? (
+            <form onSubmit={handleRename} className="flex items-center gap-2 flex-1">
+              <Input 
+                autoFocus
+                value={renameText}
+                onChange={(e) => setRenameText(e.target.value)}
+                className="h-7 text-sm"
+              />
+              <Button type="submit" size="sm" className="h-7 px-2 bg-orange-500 hover:bg-orange-600 text-white">Lưu</Button>
+            </form>
+          ) : (
+            <h4 
+              className="font-semibold text-sm truncate flex-1 cursor-pointer hover:text-orange-500 transition-colors"
+              onClick={() => setIsRenaming(true)}
             >
-              <PenSquare className="h-3 w-3" />
-            </Button>
-          </div>
+              {phase.order}. {phase.name}
+            </h4>
+          )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           <Button 
             variant="outline" 
             size="sm" 
-            className="h-8 px-3 text-xs font-semibold rounded-full bg-background hover:bg-secondary border-dashed"
+            className="h-7 px-2 text-xs font-semibold rounded-full bg-background hover:bg-secondary border-dashed"
             onClick={() => { setIsQuickAdding(true); setQuickAddText(""); }}
           >
-            <PenSquare className="h-3 w-3 mr-1.5" /> Nhập nhanh
+            <PenSquare className="h-3 w-3 mr-1" /> Thêm nhanh
           </Button>
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-full border-none text-xs font-semibold transition-all hover:shadow-md h-8 px-4 bg-asphalt !text-white hover:bg-[#1a1d1f] shadow-sm">
-              <Plus className="h-3.5 w-3.5 mr-1.5" /> Thêm Ý tưởng
+            <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-full border-none text-xs font-semibold transition-all hover:shadow-md h-7 px-3 bg-asphalt !text-white hover:bg-[#1a1d1f] shadow-sm">
+              <Plus className="h-3 w-3 mr-1" /> Ý tưởng
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[350px] max-h-[300px] overflow-y-auto">
               {availableIdeas.length === 0 ? (
-                <div className="p-4 text-xs text-muted-foreground text-center">Không còn ý tưởng nào trong Ngân hàng</div>
+                <div className="p-4 text-center text-sm text-muted-foreground">Không còn ý tưởng trong ngân hàng.</div>
               ) : (
                 availableIdeas.map(idea => (
                   <DropdownMenuItem key={idea.id} onClick={() => onAddIdea(idea.id)} className="flex flex-col items-start gap-1 p-2 cursor-pointer border-b last:border-0">
@@ -190,86 +217,85 @@ function SortablePhase({
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0 opacity-0 group-hover/header:opacity-100 transition-opacity"
             onClick={onDeletePhase}
+            title="Xóa lộ trình"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
+
+          <button className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-secondary shrink-0" {...attributes} {...listeners}>
+            <GripVertical className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
-      <div className="pl-8">
-        <SortableContext items={phase.ideaIds} strategy={verticalListSortingStrategy}>
-          <div className="min-h-[50px]">
-                    {phase.ideaIds.length === 0 ? (
-                      <div className="text-center p-6 border-2 border-dashed rounded-md bg-muted/20 text-muted-foreground">
-                        <Lightbulb className="h-6 w-6 mx-auto mb-2 opacity-20" />
-                        <p className="text-sm">Chưa có ý tưởng nào trong lộ trình này.</p>
-                      </div>
-                    ) : (
-                      phase.ideaIds.map((id) => {
-                        let idea: Idea;
-                        if (id.startsWith("custom:")) {
-                          const separatorIndex = id.indexOf("::");
-                          idea = {
-                            id,
-                            hook: id.substring(separatorIndex + 2),
-                            content: "",
-                            platform: "Tất cả", // Required by type, not used due to isCustom check
-                            contentType: "Khác",
-                            order: 0,
-                            details: "",
-                            createdAt: new Date().toISOString()
-                          };
-                        } else {
-                          const found = ideas.find(i => i.id === id);
-                          if (!found) return null;
-                          idea = found;
-                        }
-
-                        return (
-                          <SortableIdeaItem 
-                            key={idea.id} 
-                            idea={idea} 
-                            onRemove={() => onRemoveIdea(idea.id)}
-                          />
-                        );
-                      })
-                    )}
-          </div>
-        </SortableContext>
-        
-        {isQuickAdding && (
-          <div className="mt-3 p-3 bg-background border border-orange-500/50 rounded-md shadow-sm">
-            <Input 
-              autoFocus
-              placeholder="Nhập tiêu đề ý tưởng (Hook)..."
-              value={quickAddText}
-              onChange={(e) => setQuickAddText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && quickAddText.trim()) {
-                  onQuickAddIdea(quickAddText.trim());
-                  setIsQuickAdding(false);
-                  setQuickAddText("");
-                } else if (e.key === "Escape") {
-                  setIsQuickAdding(false);
-                }
-              }}
-              className="h-8 text-sm mb-2"
-            />
-            <div className="flex items-center justify-end gap-2">
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsQuickAdding(false)}>Hủy</Button>
-              <Button size="sm" className="h-7 text-xs bg-orange-500 hover:bg-orange-600 text-white" onClick={() => {
-                if (quickAddText.trim()) {
-                  onQuickAddIdea(quickAddText.trim());
-                  setIsQuickAdding(false);
-                  setQuickAddText("");
-                }
-              }}>Lưu</Button>
+      {isExpanded && (
+        <div className="p-2.5">
+          <SortableContext items={phase.ideaIds} strategy={verticalListSortingStrategy}>
+            <div className="min-h-[40px]">
+              {phase.ideaIds.length === 0 ? (
+                <div className="text-center py-4 border border-dashed rounded bg-background/50 text-muted-foreground">
+                  <p className="text-xs">Trống</p>
+                </div>
+              ) : (
+                phase.ideaIds.map((id) => {
+                  let idea: Idea;
+                  if (id.startsWith("custom:")) {
+                    const separatorIndex = id.indexOf("::");
+                    idea = {
+                      id,
+                      hook: id.substring(separatorIndex + 2),
+                      content: "",
+                      platform: "Tất cả",
+                      contentType: "Khác",
+                      order: 0,
+                      details: "",
+                      createdAt: new Date().toISOString()
+                    };
+                  } else {
+                    const found = ideas.find(i => i.id === id);
+                    if (!found) return null;
+                    idea = found;
+                  }
+                  return <SortableIdeaItem key={idea.id} idea={idea} onRemove={() => onRemoveIdea(idea.id)} />;
+                })
+              )}
             </div>
-          </div>
-        )}
-      </div>
+          </SortableContext>
+          
+          {isQuickAdding && (
+            <div className="mt-2 p-2 bg-background border border-orange-500/50 rounded shadow-sm">
+              <Input 
+                autoFocus
+                placeholder="Nhập tiêu đề ý tưởng (Hook)..."
+                value={quickAddText}
+                onChange={(e) => setQuickAddText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && quickAddText.trim()) {
+                    onQuickAddIdea(quickAddText.trim());
+                    setIsQuickAdding(false);
+                    setQuickAddText("");
+                  } else if (e.key === "Escape") {
+                    setIsQuickAdding(false);
+                  }
+                }}
+                className="h-8 text-sm mb-2"
+              />
+              <div className="flex items-center justify-end gap-2">
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsQuickAdding(false)}>Hủy</Button>
+                <Button size="sm" className="h-7 text-xs bg-orange-500 hover:bg-orange-600 text-white" onClick={() => {
+                  if (quickAddText.trim()) {
+                    onQuickAddIdea(quickAddText.trim());
+                    setIsQuickAdding(false);
+                    setQuickAddText("");
+                  }
+                }}>Lưu</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

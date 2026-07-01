@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { CampaignBoard } from "@/components/roadmap/campaign-board";
-import { Plus, Target, Calendar as CalendarIcon, Trash2 } from "lucide-react";
+import { Plus, Target, Calendar as CalendarIcon, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,11 @@ export default function RoadmapPage() {
   const [newCampaignGoal, setNewCampaignGoal] = useState<CampaignGoal>("viral");
   
   const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
+  const [expandedCampaigns, setExpandedCampaigns] = useState<Record<string, boolean>>({});
+
+  const toggleCampaign = (id: string) => {
+    setExpandedCampaigns(prev => ({ ...prev, [id]: prev[id] === false ? true : false }));
+  };
 
   if (!isProjectsLoaded || !isIdeasLoaded) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Đang tải...</div>;
@@ -118,19 +123,23 @@ export default function RoadmapPage() {
 
             return (
               <Card key={campaign.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold flex items-center gap-2">
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div 
+                      className="flex-1 cursor-pointer select-none group/title" 
+                      onClick={() => toggleCampaign(campaign.id)}
+                    >
+                      <h3 className="text-2xl font-bold flex items-center gap-2 group-hover/title:text-orange-500 transition-colors">
+                        {expandedCampaigns[campaign.id] === false ? <ChevronRight className="h-6 w-6 text-muted-foreground" /> : <ChevronDown className="h-6 w-6 text-muted-foreground" />}
                         {campaign.name}
                       </h3>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className={cn("text-xs font-semibold px-2.5 py-0.5 rounded-full border", goalColors[campaign.goal])}>
-                          <Target className="inline h-3 w-3 mr-1" />
+                      <div className="flex items-center gap-4 mt-2 ml-8">
+                        <span className={cn("text-sm font-semibold px-3 py-1 rounded-full border", goalColors[campaign.goal])}>
+                          <Target className="inline h-4 w-4 mr-1.5" />
                           {goalLabels[campaign.goal]}
                         </span>
-                        <span className="text-xs text-muted-foreground flex items-center">
-                          <CalendarIcon className="mr-1 h-3 w-3" />
+                        <span className="text-sm text-muted-foreground flex items-center">
+                          <CalendarIcon className="mr-1.5 h-4 w-4" />
                           Tạo ngày: {new Date(parseInt(campaign.id.split('-')[1])).toLocaleDateString('vi-VN')}
                         </span>
                       </div>
@@ -138,36 +147,22 @@ export default function RoadmapPage() {
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteCampaignId(campaign.id)}
+                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                      onClick={(e) => { e.stopPropagation(); setDeleteCampaignId(campaign.id); }}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-5 w-5" />
                     </Button>
                   </div>
 
-                  <div className="mb-6 bg-secondary/50 p-4 rounded-lg">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="font-medium text-muted-foreground">Tiến độ xuất bản</span>
-                      <span className="font-bold">{progress}%</span>
-                    </div>
-                    <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary transition-all duration-500 ease-out" 
-                        style={{ width: `${progress}%` }} 
-                      />
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-2">
-                      Đã đăng {publishedCount} / {totalItems} video & ý tưởng
-                    </div>
-                  </div>
-
-                  <CampaignBoard 
-                    campaign={campaign} 
-                    ideas={ideas} 
-                    projects={projects} 
-                    useProjectsHook={useProjectsHook} 
-                    useIdeasHook={useIdeasHook}
-                  />
+                  {expandedCampaigns[campaign.id] !== false && (
+                    <CampaignBoard 
+                      campaign={campaign} 
+                      ideas={ideas} 
+                      projects={projects} 
+                      useProjectsHook={useProjectsHook} 
+                      useIdeasHook={useIdeasHook}
+                    />
+                  )}
                 </div>
               </Card>
             );
