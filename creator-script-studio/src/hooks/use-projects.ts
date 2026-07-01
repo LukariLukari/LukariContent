@@ -160,7 +160,7 @@ export function useProjects() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const saveProjects = async (newProjects: Project[], immediate = false) => {
     // Optimistic UI update
@@ -419,6 +419,26 @@ export function useProjects() {
     }));
   };
 
+  const updateIdeaInPhase = (campaignId: string, phaseId: string, oldIdeaId: string, newIdeaId: string) => {
+    saveCampaigns(campaigns.map(c => {
+      if (c.id === campaignId && c.phases) {
+        return {
+          ...c,
+          phases: c.phases.map(p => {
+            if (p.id === phaseId) {
+              return { 
+                ...p, 
+                ideaIds: p.ideaIds.map(id => id === oldIdeaId ? newIdeaId : id) 
+              };
+            }
+            return p;
+          })
+        };
+      }
+      return c;
+    }));
+  };
+
   const moveIdeaBetweenPhases = (campaignId: string, fromPhaseId: string, toPhaseId: string, ideaId: string, newIndex: number) => {
     saveCampaigns(campaigns.map(c => {
       if (c.id === campaignId && c.phases) {
@@ -486,6 +506,7 @@ export function useProjects() {
     renamePhase,
     addIdeaToPhase,
     removeIdeaFromPhase,
+    updateIdeaInPhase,
     moveIdeaBetweenPhases
   };
 }

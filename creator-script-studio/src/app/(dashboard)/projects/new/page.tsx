@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UploadCloud, Link as LinkIcon, FileText, ArrowRight, Bot } from "lucide-react";
+import { UploadCloud, Link as LinkIcon, FileText, ArrowRight, Bot, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

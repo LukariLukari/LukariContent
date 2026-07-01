@@ -25,15 +25,32 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
-import { Plus, GripVertical, Trash2, Lightbulb, PenSquare, LayoutList, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, GripVertical, Trash2, Lightbulb, PenSquare, LayoutList, ChevronRight, ChevronDown, ArrowDown, Edit2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
+const toRoman = (num: number): string => {
+  const roman: Record<string, number> = {
+    M: 1000, CM: 900, D: 500, CD: 400,
+    C: 100, XC: 90, L: 50, XL: 40,
+    X: 10, IX: 9, V: 5, IV: 4, I: 1
+  };
+  let str = '';
+  for (let i of Object.keys(roman)) {
+    let q = Math.floor(num / roman[i]);
+    num -= q * roman[i];
+    str += i.repeat(q);
+  }
+  return str;
+};
+
 // Sortable Idea Item
-function SortableIdeaItem({ idea, onRemove }: { idea: Idea, onRemove: () => void }) {
+function SortableIdeaItem({ idea, index, onRemove, onUpdateCustomIdea }: { idea: Idea, index: number, onRemove: () => void, onUpdateCustomIdea?: (oldId: string, newText: string) => void }) {
   const isCustom = idea.id.startsWith("custom:");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(idea.hook || idea.content || "");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: idea.id,
     data: {
@@ -47,40 +64,82 @@ function SortableIdeaItem({ idea, onRemove }: { idea: Idea, onRemove: () => void
     transition,
   };
 
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editText.trim() && onUpdateCustomIdea && isCustom) {
+      onUpdateCustomIdea(idea.id, editText.trim());
+      setIsEditing(false);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        "flex items-center justify-between p-3 mb-2 rounded-md shadow-sm group border",
-        isCustom 
-          ? "bg-muted/30 border-dashed border-muted-foreground/30 text-foreground" 
-          : "bg-background border-l-4 border-l-orange-500 border-border",
-        isDragging && "opacity-50 ring-2 ring-primary"
-      )}
+      className={cn("flex items-stretch gap-2 mb-2 group relative", isDragging && "opacity-50")}
     >
+      <div className="flex items-center justify-center w-6 shrink-0 relative">
+        {index > 0 && (
+          <ArrowDown className="h-4 w-4 text-muted-foreground absolute -top-2 left-1/2 -translate-x-1/2" />
+        )}
+        <span className="text-base font-bold text-foreground/80">
+          {index + 1}.
+        </span>
+      </div>
+      <div
+        className={cn(
+          "flex items-center justify-between p-3 rounded-md shadow-sm flex-1 overflow-hidden border",
+          isCustom 
+            ? "bg-muted/30 border-dashed border-muted-foreground/30 text-foreground" 
+            : "bg-background border-l-4 border-l-orange-500 border-border"
+        )}
+      >
       <div className="flex items-center gap-2 overflow-hidden flex-1">
-        <div 
-          className={cn("flex-1 truncate pr-2 select-none group/text", !isCustom && "cursor-pointer")}
-          onClick={() => { if (!isCustom) window.open("/ideas", "_blank"); }}
-          title={isCustom ? undefined : "Đến Ngân hàng ý tưởng"}
-        >
-          <p className={cn(
-            "text-sm truncate transition-colors", 
-            isCustom ? "font-normal italic" : "font-medium group-hover/text:text-orange-500"
-          )}>
-            {idea.hook || idea.content || "Ý tưởng trống"}
-          </p>
-          {!isCustom && (
-            <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                {idea.platform} • {idea.contentType}
-              </p>
-            </div>
-          )}
-        </div>
+        {isEditing ? (
+          <form onSubmit={handleSave} className="flex items-center gap-2 flex-1 mr-2">
+            <Input 
+              autoFocus
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="h-7 text-sm bg-background"
+            />
+            <Button type="submit" size="sm" className="h-7 px-2 bg-orange-500 hover:bg-orange-600 text-white">Lưu</Button>
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => { setIsEditing(false); setEditText(idea.hook || idea.content || ""); }}>Hủy</Button>
+          </form>
+        ) : (
+          <div 
+            className={cn("flex-1 truncate pr-2 select-none group/text", !isCustom && "cursor-pointer")}
+            onClick={() => { if (!isCustom) window.open("/ideas", "_blank"); }}
+            title={isCustom ? undefined : "Đến Ngân hàng ý tưởng"}
+          >
+            <p className={cn(
+              "text-sm truncate transition-colors", 
+              isCustom ? "font-normal italic" : "font-medium group-hover/text:text-orange-500"
+            )}>
+              {idea.hook || idea.content || "Ý tưởng trống"}
+            </p>
+            {!isCustom && (
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                  {idea.platform} • {idea.contentType}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-1 shrink-0">
+        {isCustom && !isEditing && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10"
+            onClick={() => setIsEditing(true)}
+            title="Chỉnh sửa nội dung"
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+        )}
         <Button 
           variant="ghost" 
           size="icon" 
@@ -95,28 +154,33 @@ function SortableIdeaItem({ idea, onRemove }: { idea: Idea, onRemove: () => void
         </button>
       </div>
     </div>
+  </div>
   );
 }
 
 // Sortable Phase List
 function SortablePhase({ 
   phase, 
+  index,
   ideas, 
   availableIdeas, 
   onAddIdea, 
   onRemoveIdea, 
   onDeletePhase, 
   onRenamePhase,
-  onQuickAddIdea 
+  onQuickAddIdea,
+  onUpdateCustomIdea
 }: { 
   phase: CampaignPhase, 
+  index: number,
   ideas: Idea[], 
   availableIdeas: Idea[], 
   onAddIdea: (ideaId: string) => void,
   onRemoveIdea: (ideaId: string) => void,
   onDeletePhase: () => void,
   onRenamePhase: (name: string) => void,
-  onQuickAddIdea: (text: string) => void
+  onQuickAddIdea: (text: string) => void,
+  onUpdateCustomIdea: (oldId: string, newText: string) => void
 }) {
   const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [quickAddText, setQuickAddText] = useState("");
@@ -181,7 +245,7 @@ function SortablePhase({
               className="font-semibold text-sm truncate flex-1 cursor-pointer hover:text-orange-500 transition-colors"
               onClick={() => setIsRenaming(true)}
             >
-              {phase.order}. {phase.name}
+              {toRoman(index + 1)}. {phase.name}
             </h4>
           )}
         </div>
@@ -239,7 +303,7 @@ function SortablePhase({
                   <p className="text-xs">Trống</p>
                 </div>
               ) : (
-                phase.ideaIds.map((id) => {
+                phase.ideaIds.map((id, ideaIndex) => {
                   let idea: Idea;
                   if (id.startsWith("custom:")) {
                     const separatorIndex = id.indexOf("::");
@@ -258,7 +322,7 @@ function SortablePhase({
                     if (!found) return null;
                     idea = found;
                   }
-                  return <SortableIdeaItem key={idea.id} idea={idea} onRemove={() => onRemoveIdea(idea.id)} />;
+                  return <SortableIdeaItem key={idea.id} idea={idea} index={ideaIndex} onRemove={() => onRemoveIdea(idea.id)} onUpdateCustomIdea={onUpdateCustomIdea} />;
                 })
               )}
             </div>
@@ -301,7 +365,16 @@ function SortablePhase({
 }
 
 export function CampaignBoard({ campaign, ideas, projects, useProjectsHook, useIdeasHook }: { campaign: Campaign, ideas: Idea[], projects: any[], useProjectsHook: any, useIdeasHook?: any }) {
-  const { addPhase, updatePhaseOrder, deletePhase, renamePhase, addIdeaToPhase, removeIdeaFromPhase, moveIdeaBetweenPhases } = useProjectsHook;
+  const { 
+    addPhase, 
+    updatePhaseOrder, 
+    deletePhase, 
+    renamePhase, 
+    addIdeaToPhase, 
+    removeIdeaFromPhase, 
+    updateIdeaInPhase,
+    moveIdeaBetweenPhases 
+  } = useProjectsHook;
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<"Phase" | "Idea" | null>(null);
 
@@ -451,10 +524,11 @@ export function CampaignBoard({ campaign, ideas, projects, useProjectsHook, useI
         >
           <SortableContext items={phases.map(p => p.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
-              {phases.map(phase => (
+              {phases.map((phase, index) => (
                 <SortablePhase 
                   key={phase.id} 
                   phase={phase} 
+                  index={index}
                   ideas={ideas}
                   availableIdeas={availableIdeas}
                   onAddIdea={(ideaId) => addIdeaToPhase(campaign.id, phase.id, ideaId)}
@@ -468,13 +542,17 @@ export function CampaignBoard({ campaign, ideas, projects, useProjectsHook, useI
                     const customId = `custom:${Date.now()}::${text}`;
                     addIdeaToPhase(campaign.id, phase.id, customId);
                   }}
+                  onUpdateCustomIdea={(oldId, newText) => {
+                    const customId = `custom:${Date.now()}::${newText}`;
+                    updateIdeaInPhase(campaign.id, phase.id, oldId, customId);
+                  }}
                 />
               ))}
             </div>
           </SortableContext>
 
           {/* Optional: Drag Overlay for smoother UI */}
-          <DragOverlay dropAnimation={defaultDropAnimationSideEffects({ sideEffects: ['default'] })}>
+          <DragOverlay>
             {activeId && activeType === "Phase" && (
               <div className="bg-secondary border border-primary rounded-xl p-4 opacity-80 shadow-2xl">
                 <p className="font-bold">Đang di chuyển lộ trình...</p>

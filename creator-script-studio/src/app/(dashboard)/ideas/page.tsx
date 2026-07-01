@@ -227,7 +227,7 @@ export default function IdeasPage() {
           </h1>
           <p className="text-muted-foreground mt-1">Lên ý tưởng và quản lý nội dung đa nền tảng (Gốc & Reup).</p>
         </div>
-        <Button onClick={addIdea} className="bg-asphalt text-paper hover:bg-[#1a1d1f] hover:scale-105 transition-all">
+        <Button onClick={() => addIdea()} className="bg-asphalt text-paper hover:bg-[#1a1d1f] hover:scale-105 transition-all">
           <Plus className="mr-2 h-4 w-4" /> Thêm Ý tưởng
         </Button>
       </div>
@@ -276,7 +276,7 @@ export default function IdeasPage() {
         {/* Quick Add footer */}
         {ideas.length > 0 && (
           <div className="p-2 bg-secondary/20 border-t border-dashed">
-            <Button variant="ghost" onClick={addIdea} className="w-full text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" onClick={() => addIdea()} className="w-full text-muted-foreground hover:text-foreground">
               <Plus className="h-4 w-4 mr-2" /> Nhấn để thêm dòng mới
             </Button>
           </div>

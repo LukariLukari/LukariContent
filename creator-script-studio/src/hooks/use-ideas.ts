@@ -20,7 +20,7 @@ export type Idea = {
 export function useIdeas() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const supabase = createClient();
 

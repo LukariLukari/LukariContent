@@ -166,7 +166,7 @@ function SortableBlock({ block, index, onDelete, onUpdateTime, onUpdateField, on
 }
 
 export function TimelineBuilder({ projectId }: { projectId: string }) {
-  const { getProject, updateProjectBlocks, updateProjectName, updateProjectDescription, isLoaded } = useProjects();
+  const { getProject, updateProjectBlocks, updateProjectName, updateProjectDescription, updateProjectStatus, updateProjectPublishDate, updateProjectTasks, updateProjectMetrics, isLoaded } = useProjects();
   const project = getProject(projectId);
   const blocks = project?.blocks || [];
   const containerRef = useRef<HTMLDivElement>(null);
