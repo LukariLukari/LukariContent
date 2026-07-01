@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export type ScriptBlock = {
   id: string;
@@ -71,44 +72,94 @@ export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const supabase = createClient();
 
+  // Load initial data
   useEffect(() => {
-    const savedProjects = localStorage.getItem("creator-projects");
-    if (savedProjects) {
-      try {
-        setProjects(JSON.parse(savedProjects));
-      } catch (e) {
-        console.error("Failed to parse projects", e);
-      }
-    }
+    const loadData = async () => {
+      let localProjects: Project[] = [];
+      let localCampaigns: Campaign[] = [];
 
-    const savedCampaigns = localStorage.getItem("creator-campaigns");
-    if (savedCampaigns) {
-      try {
-        setCampaigns(JSON.parse(savedCampaigns));
-      } catch (e) {
-        console.error("Failed to parse campaigns", e);
+      // 1. Read Local Storage
+      const savedProjects = localStorage.getItem("creator-projects");
+      if (savedProjects) {
+        try {
+          localProjects = JSON.parse(savedProjects);
+        } catch (e) {
+          console.error("Failed to parse local projects", e);
+        }
       }
-    }
-    setIsLoaded(true);
+
+      const savedCampaigns = localStorage.getItem("creator-campaigns");
+      if (savedCampaigns) {
+        try {
+          localCampaigns = JSON.parse(savedCampaigns);
+        } catch (e) {
+          console.error("Failed to parse local campaigns", e);
+        }
+      }
+
+      // We immediately set local data to not block the UI
+      setProjects(localProjects);
+      setCampaigns(localCampaigns);
+      setIsLoaded(true);
+
+      // 2. Try to fetch from Cloud (Supabase) and merge
+      if (supabase) {
+        try {
+          const { data: cloudProjects, error } = await supabase.from('projects').select('*');
+          if (!error && cloudProjects && cloudProjects.length > 0) {
+            console.log("Cloud projects:", cloudProjects.length);
+          } else if (!error && cloudProjects?.length === 0 && localProjects.length > 0) {
+            console.log("Cloud is empty. Pushing local data to Supabase...");
+            await supabase.from('projects').upsert(localProjects);
+          }
+        } catch (err) {
+          console.error("Supabase sync error:", err);
+        }
+      } else {
+        console.warn("Supabase keys missing. Running in local-only mode.");
+      }
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const timeoutRef = useRef<NodeJS.Timeout>();
 
-  const saveProjects = (newProjects: Project[], immediate = false) => {
+  const saveProjects = async (newProjects: Project[], immediate = false) => {
+    // Optimistic UI update
     setProjects(newProjects);
     
+    // Save to LocalStorage
     if (immediate) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       localStorage.setItem("creator-projects", JSON.stringify(newProjects));
+      
+      // Push to Supabase
+      if (supabase) {
+        try {
+          await supabase.from('projects').upsert(newProjects);
+        } catch (e) {
+          console.error("Failed to save to Supabase", e);
+        }
+      }
       return;
     }
 
-    // Debounce localStorage to prevent extreme lag on keystrokes
+    // Debounce localStorage & Supabase to prevent extreme lag and API spam on keystrokes
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
+    timeoutRef.current = setTimeout(async () => {
       localStorage.setItem("creator-projects", JSON.stringify(newProjects));
-    }, 500);
+      if (supabase) {
+        try {
+          await supabase.from('projects').upsert(newProjects);
+        } catch (e) {
+          console.error("Failed to sync with Supabase", e);
+        }
+      }
+    }, 1000); // Increased debounce to 1s for API calls
   };
 
   const createProject = (name: string, description?: string, blocks?: ScriptBlock[]) => {

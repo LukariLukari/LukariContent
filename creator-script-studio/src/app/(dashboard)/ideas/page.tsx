@@ -93,18 +93,18 @@ function SortableIdeaRow({ idea, index, onDeleteRequest, onUpdate }: { idea: Ide
       ref={setNodeRef} 
       style={style} 
       className={cn(
-        "grid grid-cols-[50px_120px_120px_2fr_2fr_2fr_50px] gap-2 p-2 border-b items-start bg-card transition-colors group hover:bg-secondary/20",
+        "grid grid-cols-[40px_100px_120px_1fr_40px] divide-x divide-dashed divide-border/50 border-b items-stretch bg-card transition-colors group hover:bg-secondary/20",
         isDragging && "shadow-lg border-primary/50 bg-secondary"
       )}
     >
-      <div className="flex items-center h-[40px] px-2 text-muted-foreground gap-1">
+      <div className="flex flex-col items-center justify-start pt-4 px-2 text-muted-foreground gap-2">
         <button className="cursor-grab active:cursor-grabbing hover:text-foreground" {...attributes} {...listeners}>
           <GripVertical className="h-4 w-4" />
         </button>
         <span className="text-xs font-medium">{index + 1}</span>
       </div>
 
-      <div className="h-full pt-1">
+      <div className="p-3">
         <DropdownMenu>
           <DropdownMenuTrigger className="w-full">
             <div className={cn(
@@ -127,7 +127,7 @@ function SortableIdeaRow({ idea, index, onDeleteRequest, onUpdate }: { idea: Ide
         </DropdownMenu>
       </div>
 
-      <div className="h-full pt-1">
+      <div className="p-3">
         <DropdownMenu>
           <DropdownMenuTrigger className="w-full">
             <div className="text-xs px-2 py-1.5 rounded-md border bg-background text-left flex justify-between items-center transition-colors hover:bg-secondary">
@@ -145,33 +145,43 @@ function SortableIdeaRow({ idea, index, onDeleteRequest, onUpdate }: { idea: Ide
         </DropdownMenu>
       </div>
 
-      <div>
-        <AutoResizeTextarea 
-          value={idea.content} 
-          onChange={(val) => onUpdate(idea.id, "content", val)}
-          placeholder="Ý tưởng cốt lõi..."
-          className="font-medium"
-        />
+      <div className="p-3">
+        <div className="flex flex-col bg-background/50 rounded-lg border shadow-sm divide-y">
+          {/* Hook */}
+          <div className="flex flex-col p-2">
+            <span className="text-[10px] font-bold text-orange-600/80 dark:text-orange-400/80 uppercase px-2 py-1">Hook (3s đầu)</span>
+            <AutoResizeTextarea 
+              value={idea.hook} 
+              onChange={(val) => onUpdate(idea.id, "hook", val)}
+              placeholder="Câu hook thu hút..."
+            />
+          </div>
+
+          {/* Nội dung */}
+          <div className="flex flex-col p-2">
+            <span className="text-[10px] font-bold text-orange-600/80 dark:text-orange-400/80 uppercase px-2 py-1">Nội dung (Core)</span>
+            <AutoResizeTextarea 
+              value={idea.content} 
+              onChange={(val) => onUpdate(idea.id, "content", val)}
+              placeholder="Ý tưởng cốt lõi..."
+              className="font-medium min-h-[60px]"
+            />
+          </div>
+
+          {/* Kết (CTA) */}
+          <div className="flex flex-col p-2">
+            <span className="text-[10px] font-bold text-orange-600/80 dark:text-orange-400/80 uppercase px-2 py-1">Kết (Lời kêu gọi - CTA) & Ghi chú</span>
+            <AutoResizeTextarea 
+              value={idea.details} 
+              onChange={(val) => onUpdate(idea.id, "details", val)}
+              placeholder="Chi tiết triển khai, góc máy, âm thanh..."
+              className="text-muted-foreground"
+            />
+          </div>
+        </div>
       </div>
 
-      <div>
-        <AutoResizeTextarea 
-          value={idea.hook} 
-          onChange={(val) => onUpdate(idea.id, "hook", val)}
-          placeholder="Câu hook (3s đầu)..."
-        />
-      </div>
-
-      <div>
-        <AutoResizeTextarea 
-          value={idea.details} 
-          onChange={(val) => onUpdate(idea.id, "details", val)}
-          placeholder="Chi tiết triển khai, góc máy, âm thanh..."
-          className="text-muted-foreground"
-        />
-      </div>
-
-      <div className="flex items-center justify-center h-[40px] opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center justify-center p-3 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -223,41 +233,44 @@ export default function IdeasPage() {
       </div>
 
       <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden flex flex-col">
-        {/* Table Header */}
-        <div className="grid grid-cols-[50px_120px_120px_2fr_2fr_2fr_50px] gap-2 p-3 bg-secondary/50 border-b text-xs font-semibold uppercase tracking-wider text-muted-foreground items-center">
-          <div className="text-center">STT</div>
-          <div>Nền tảng</div>
-          <div>Dạng Content</div>
-          <div>Nội dung (Core)</div>
-          <div>Hook (3s đầu)</div>
-          <div>Chi tiết / Ghi chú</div>
-          <div></div>
-        </div>
-
-        {/* Table Body */}
-        <div className="flex-1 overflow-y-auto">
-          {ideas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-              <Lightbulb className="h-10 w-10 mb-2 opacity-20" />
-              <p>Chưa có ý tưởng nào. Hãy tạo ý tưởng đầu tiên!</p>
+        {/* Scrollable Container */}
+        <div className="flex-1 overflow-auto">
+          <div className="min-w-[900px] flex flex-col h-full">
+            {/* Table Header */}
+            <div className="grid grid-cols-[40px_100px_120px_1fr_40px] divide-x divide-dashed divide-border/50 bg-secondary/30 border-b text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-500 items-center sticky top-0 z-10">
+              <div className="text-center p-3">STT</div>
+              <div className="p-3">Nền tảng</div>
+              <div className="p-3">Dạng Content</div>
+              <div className="p-3">Chi tiết (Hook, Nội dung, Kết)</div>
+              <div className="p-3"></div>
             </div>
-          ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={ideas} strategy={verticalListSortingStrategy}>
-                <div className="flex flex-col pb-12">
-                  {ideas.map((idea, index) => (
-                    <SortableIdeaRow 
-                      key={idea.id} 
-                      idea={idea} 
-                      index={index} 
-                      onDeleteRequest={setIdeaToDelete} 
-                      onUpdate={updateIdea} 
-                    />
-                  ))}
+
+            {/* Table Body */}
+            <div className="flex-1">
+              {ideas.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+                  <Lightbulb className="h-10 w-10 mb-2 opacity-20" />
+                  <p>Chưa có ý tưởng nào. Hãy tạo ý tưởng đầu tiên!</p>
                 </div>
-              </SortableContext>
-            </DndContext>
-          )}
+              ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={ideas} strategy={verticalListSortingStrategy}>
+                    <div className="flex flex-col pb-12">
+                      {ideas.map((idea, index) => (
+                        <SortableIdeaRow 
+                          key={idea.id} 
+                          idea={idea} 
+                          index={index} 
+                          onDeleteRequest={setIdeaToDelete} 
+                          onUpdate={updateIdea} 
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
+          </div>
         </div>
         
         {/* Quick Add footer */}
