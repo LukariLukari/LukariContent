@@ -135,7 +135,9 @@ export function useProjects() {
         try {
           const { data: cloudProjects, error } = await supabase.from('projects').select('*');
           if (!error && cloudProjects && cloudProjects.length > 0) {
-            console.log("Cloud projects:", cloudProjects.length);
+            console.log("Loaded Cloud projects:", cloudProjects.length);
+            setProjects(cloudProjects);
+            localStorage.setItem("creator-projects", JSON.stringify(cloudProjects));
           } else if (!error && cloudProjects?.length === 0 && localProjects.length > 0) {
             console.log("Cloud projects is empty. Pushing local data to Supabase...");
             await supabase.from('projects').upsert(localProjects);
@@ -143,7 +145,9 @@ export function useProjects() {
 
           const { data: cloudCampaigns, error: campError } = await supabase.from('campaigns').select('*');
           if (!campError && cloudCampaigns && cloudCampaigns.length > 0) {
-            console.log("Cloud campaigns:", cloudCampaigns.length);
+            console.log("Loaded Cloud campaigns:", cloudCampaigns.length);
+            setCampaigns(cloudCampaigns);
+            localStorage.setItem("creator-campaigns", JSON.stringify(cloudCampaigns));
           } else if (!campError && cloudCampaigns?.length === 0 && localCampaigns.length > 0) {
             console.log("Cloud campaigns is empty. Pushing local data to Supabase...");
             await supabase.from('campaigns').upsert(localCampaigns);

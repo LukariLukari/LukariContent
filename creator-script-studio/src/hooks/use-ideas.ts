@@ -57,7 +57,9 @@ export function useIdeas() {
         try {
           const { data: cloudIdeas, error } = await supabase.from('ideas').select('*');
           if (!error && cloudIdeas && cloudIdeas.length > 0) {
-            console.log("Cloud ideas:", cloudIdeas.length);
+            console.log("Loaded Cloud ideas:", cloudIdeas.length);
+            setIdeas(cloudIdeas);
+            localStorage.setItem("creator-ideas", JSON.stringify(cloudIdeas));
           } else if (!error && cloudIdeas?.length === 0 && localIdeas.length > 0) {
             console.log("Cloud ideas is empty. Pushing local data to Supabase...");
             await supabase.from('ideas').upsert(localIdeas);
