@@ -135,28 +135,34 @@ export function useProjects() {
         try {
           const { data: cloudProjects, error } = await supabase.from('projects').select('*');
           if (!error && cloudProjects) {
-            const mergedProjects = [...localProjects];
-            const localProjIds = new Set(localProjects.map(p => p.id));
-            for (const cp of cloudProjects) {
-              if (!localProjIds.has(cp.id)) mergedProjects.push(cp);
+            // Lấy Supabase làm chuẩn (Source of Truth)
+            const cloudProjIds = new Set(cloudProjects.map(p => p.id));
+            const localOnlyProjects = localProjects.filter(p => !cloudProjIds.has(p.id));
+            
+            const mergedProjects = [...cloudProjects, ...localOnlyProjects];
+            
+            // Đẩy những project chỉ có ở local lên cloud
+            if (localOnlyProjects.length > 0) {
+              await supabase.from('projects').upsert(localOnlyProjects);
             }
-            if (cloudProjects.length < localProjects.length || cloudProjects.length === 0) {
-              await supabase.from('projects').upsert(mergedProjects);
-            }
+            
             setProjects(mergedProjects);
             localStorage.setItem("creator-projects", JSON.stringify(mergedProjects));
           }
 
           const { data: cloudCampaigns, error: campError } = await supabase.from('campaigns').select('*');
           if (!campError && cloudCampaigns) {
-            const mergedCampaigns = [...localCampaigns];
-            const localCampIds = new Set(localCampaigns.map(c => c.id));
-            for (const cc of cloudCampaigns) {
-              if (!localCampIds.has(cc.id)) mergedCampaigns.push(cc);
+            // Lấy Supabase làm chuẩn (Source of Truth)
+            const cloudCampIds = new Set(cloudCampaigns.map(c => c.id));
+            const localOnlyCampaigns = localCampaigns.filter(c => !cloudCampIds.has(c.id));
+            
+            const mergedCampaigns = [...cloudCampaigns, ...localOnlyCampaigns];
+            
+            // Đẩy những campaign chỉ có ở local lên cloud
+            if (localOnlyCampaigns.length > 0) {
+              await supabase.from('campaigns').upsert(localOnlyCampaigns);
             }
-            if (cloudCampaigns.length < localCampaigns.length || cloudCampaigns.length === 0) {
-              await supabase.from('campaigns').upsert(mergedCampaigns);
-            }
+            
             setCampaigns(mergedCampaigns);
             localStorage.setItem("creator-campaigns", JSON.stringify(mergedCampaigns));
           }
