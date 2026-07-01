@@ -53,6 +53,7 @@ export type Campaign = {
   startDate?: string;
   endDate?: string;
   projectIds: string[];
+  ideaIds?: string[];
 };
 
 const defaultBlocks: ScriptBlock[] = [
@@ -225,6 +226,7 @@ export function useProjects() {
       name,
       goal,
       projectIds: [],
+      ideaIds: [],
     };
     saveCampaigns([newCampaign, ...campaigns]);
     return newCampaign.id;
@@ -267,6 +269,29 @@ export function useProjects() {
     saveProjects(updatedProjects, true);
   };
 
+  const addIdeaToCampaign = (campaignId: string, ideaId: string) => {
+    const updatedCampaigns = campaigns.map(c => {
+      if (c.id === campaignId) {
+        const ideaIds = c.ideaIds || [];
+        if (!ideaIds.includes(ideaId)) {
+          return { ...c, ideaIds: [...ideaIds, ideaId] };
+        }
+      }
+      return c;
+    });
+    saveCampaigns(updatedCampaigns);
+  };
+
+  const removeIdeaFromCampaign = (campaignId: string, ideaId: string) => {
+    const updatedCampaigns = campaigns.map(c => {
+      if (c.id === campaignId && c.ideaIds) {
+        return { ...c, ideaIds: c.ideaIds.filter(id => id !== ideaId) };
+      }
+      return c;
+    });
+    saveCampaigns(updatedCampaigns);
+  };
+
   const updateProjectTasks = (id: string, tasks: ProjectTask[]) => {
     saveProjects(projects.map(p => 
       p.id === id ? { ...p, tasks, updatedAt: new Date().toISOString() } : p
@@ -296,6 +321,8 @@ export function useProjects() {
     createCampaign,
     deleteCampaign,
     addProjectToCampaign,
-    removeProjectFromCampaign
+    removeProjectFromCampaign,
+    addIdeaToCampaign,
+    removeIdeaFromCampaign
   };
 }

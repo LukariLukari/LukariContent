@@ -1,21 +1,24 @@
 "use client";
 
 import { useProjects, CampaignGoal, Campaign } from "@/hooks/use-projects";
+import { useIdeas } from "@/hooks/use-ideas";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Target, TrendingUp, Calendar as CalendarIcon, Trash2, FolderPlus } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Target, TrendingUp, Calendar as CalendarIcon, Trash2, FolderPlus, Lightbulb } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export default function RoadmapPage() {
-  const { campaigns, projects, isLoaded, createCampaign, deleteCampaign, addProjectToCampaign, removeProjectFromCampaign } = useProjects();
+  const { campaigns, projects, isLoaded: isProjectsLoaded, createCampaign, deleteCampaign, addProjectToCampaign, removeProjectFromCampaign, addIdeaToCampaign, removeIdeaFromCampaign } = useProjects();
+  const { ideas, isLoaded: isIdeasLoaded } = useIdeas();
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState("");
   const [newCampaignGoal, setNewCampaignGoal] = useState<CampaignGoal>("viral");
 
-  if (!isLoaded) {
+  if (!isProjectsLoaded || !isIdeasLoaded) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Đang tải...</div>;
   }
 
@@ -99,8 +102,12 @@ export default function RoadmapPage() {
         <div className="grid gap-6">
           {campaigns.map((campaign) => {
             const campaignProjects = projects.filter(p => campaign.projectIds.includes(p.id));
+            const campaignIdeas = ideas.filter(i => campaign.ideaIds?.includes(i.id));
+            const availableIdeas = ideas.filter(i => !campaign.ideaIds?.includes(i.id));
+
             const publishedCount = campaignProjects.filter(p => p.status === "published").length;
-            const progress = campaignProjects.length === 0 ? 0 : Math.round((publishedCount / campaignProjects.length) * 100);
+            const totalItems = campaignProjects.length + campaignIdeas.length;
+            const progress = totalItems === 0 ? 0 : Math.round((publishedCount / totalItems) * 100);
 
             return (
               <Card key={campaign.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -147,16 +154,34 @@ export default function RoadmapPage() {
                       />
                     </div>
                     <div className="text-xs text-muted-foreground mt-2">
-                      Đã đăng {publishedCount} / {campaignProjects.length} video
+                      Đã đăng {publishedCount} / {totalItems} video & ý tưởng
                     </div>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-sm">Các dự án (Kịch bản) trong chiến dịch</h4>
+                      <h4 className="font-semibold text-sm">Các dự án & Ý tưởng trong chiến dịch</h4>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md border text-xs font-medium transition-colors h-8 px-3 bg-orange-50/50 border-orange-200 text-orange-700 hover:bg-orange-100 hover:text-orange-800">
+                          <Plus className="h-3 w-3 mr-1" /> Thêm Ý tưởng
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[350px] max-h-[300px] overflow-y-auto">
+                          {availableIdeas.length === 0 ? (
+                            <div className="p-4 text-xs text-muted-foreground text-center">Không còn ý tưởng nào trong Ngân hàng</div>
+                          ) : (
+                            availableIdeas.map(idea => (
+                              <DropdownMenuItem key={idea.id} onClick={() => addIdeaToCampaign(campaign.id, idea.id)} className="flex flex-col items-start gap-1 p-2 cursor-pointer border-b last:border-0">
+                                <span className="font-medium text-sm truncate w-full">{idea.content || "Ý tưởng trống"}</span>
+                                <span className="text-xs text-muted-foreground">{idea.platform} • {idea.contentType}</span>
+                              </DropdownMenuItem>
+                            ))
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                     
-                    {campaignProjects.length === 0 ? (
+                    {totalItems === 0 ? (
                       <div className="text-sm text-muted-foreground italic p-4 border border-dashed rounded-md bg-secondary/30 text-center">
                         Chưa có kịch bản nào. Hãy vào chi tiết kịch bản để thêm vào chiến dịch này.
                       </div>
@@ -166,11 +191,13 @@ export default function RoadmapPage() {
                           <div 
                             key={project.id} 
                             onClick={() => router.push(`/projects/${project.id}`)}
-                            className="flex items-center justify-between p-3 border rounded-md hover:border-primary/50 cursor-pointer bg-background transition-colors group"
+                            className="flex items-center justify-between p-3 border border-l-4 border-l-primary rounded-md hover:border-primary/50 cursor-pointer bg-background transition-colors group shadow-sm"
                           >
                             <div className="flex-1 truncate pr-2">
                               <p className="text-sm font-medium truncate">{project.name}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5 capitalize">{project.status}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 capitalize flex items-center gap-1">
+                                <FolderPlus className="h-3 w-3" /> Dự án • {project.status}
+                              </p>
                             </div>
                             <Button 
                               variant="ghost" 
@@ -179,6 +206,33 @@ export default function RoadmapPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 removeProjectFromCampaign(campaign.id, project.id);
+                              }}
+                              title="Gỡ khỏi chiến dịch"
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
+
+                        {campaignIdeas.map(idea => (
+                          <div 
+                            key={idea.id} 
+                            onClick={() => router.push(`/ideas`)}
+                            className="flex items-center justify-between p-3 border border-l-4 border-l-orange-500 rounded-md hover:border-orange-500/50 cursor-pointer bg-background transition-colors group shadow-sm"
+                          >
+                            <div className="flex-1 truncate pr-2">
+                              <p className="text-sm font-medium truncate">{idea.content || "Ý tưởng trống"}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                                <Lightbulb className="h-3 w-3 text-orange-500" /> Ngân hàng ý tưởng
+                              </p>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeIdeaFromCampaign(campaign.id, idea.id);
                               }}
                               title="Gỡ khỏi chiến dịch"
                             >
