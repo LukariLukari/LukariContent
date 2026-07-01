@@ -4,19 +4,23 @@ import { useProjects, CampaignGoal, Campaign } from "@/hooks/use-projects";
 import { useIdeas } from "@/hooks/use-ideas";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Target, TrendingUp, Calendar as CalendarIcon, Trash2, FolderPlus, Lightbulb } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { CampaignBoard } from "@/components/roadmap/campaign-board";
+import { Plus, Target, Calendar as CalendarIcon, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export default function RoadmapPage() {
-  const { campaigns, projects, isLoaded: isProjectsLoaded, createCampaign, deleteCampaign, addProjectToCampaign, removeProjectFromCampaign, addIdeaToCampaign, removeIdeaFromCampaign } = useProjects();
+  const useProjectsHook = useProjects();
+  const { campaigns, projects, isLoaded: isProjectsLoaded, createCampaign, deleteCampaign, addProjectToCampaign, removeProjectFromCampaign, addIdeaToCampaign, removeIdeaFromCampaign } = useProjectsHook;
   const { ideas, isLoaded: isIdeasLoaded } = useIdeas();
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState("");
   const [newCampaignGoal, setNewCampaignGoal] = useState<CampaignGoal>("viral");
+  
+  const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null);
 
   if (!isProjectsLoaded || !isIdeasLoaded) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Đang tải...</div>;
@@ -102,11 +106,13 @@ export default function RoadmapPage() {
         <div className="grid gap-6">
           {campaigns.map((campaign) => {
             const campaignProjects = projects.filter(p => campaign.projectIds.includes(p.id));
-            const campaignIdeas = ideas.filter(i => campaign.ideaIds?.includes(i.id));
-            const availableIdeas = ideas.filter(i => !campaign.ideaIds?.includes(i.id));
+            const campaignIdeaIds = new Set([
+              ...(campaign.ideaIds || []),
+              ...(campaign.phases?.flatMap(p => p.ideaIds) || [])
+            ]);
 
             const publishedCount = campaignProjects.filter(p => p.status === "published").length;
-            const totalItems = campaignProjects.length + campaignIdeas.length;
+            const totalItems = campaignProjects.length + campaignIdeaIds.size;
             const progress = totalItems === 0 ? 0 : Math.round((publishedCount / totalItems) * 100);
 
             return (
@@ -132,11 +138,7 @@ export default function RoadmapPage() {
                       variant="ghost" 
                       size="icon" 
                       className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => {
-                        if(confirm('Bạn có chắc chắn muốn xóa chiến dịch này? Các dự án bên trong sẽ không bị xóa.')) {
-                          deleteCampaign(campaign.id);
-                        }
-                      }}
+                      onClick={() => setDeleteCampaignId(campaign.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -158,97 +160,38 @@ export default function RoadmapPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-sm">Các dự án & Ý tưởng trong chiến dịch</h4>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md border text-xs font-medium transition-colors h-8 px-3 bg-orange-50/50 border-orange-200 text-orange-700 hover:bg-orange-100 hover:text-orange-800">
-                          <Plus className="h-3 w-3 mr-1" /> Thêm Ý tưởng
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[350px] max-h-[300px] overflow-y-auto">
-                          {availableIdeas.length === 0 ? (
-                            <div className="p-4 text-xs text-muted-foreground text-center">Không còn ý tưởng nào trong Ngân hàng</div>
-                          ) : (
-                            availableIdeas.map(idea => (
-                              <DropdownMenuItem key={idea.id} onClick={() => addIdeaToCampaign(campaign.id, idea.id)} className="flex flex-col items-start gap-1 p-2 cursor-pointer border-b last:border-0">
-                                <span className="font-medium text-sm truncate w-full">{idea.content || "Ý tưởng trống"}</span>
-                                <span className="text-xs text-muted-foreground">{idea.platform} • {idea.contentType}</span>
-                              </DropdownMenuItem>
-                            ))
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    
-                    {totalItems === 0 ? (
-                      <div className="text-sm text-muted-foreground italic p-4 border border-dashed rounded-md bg-secondary/30 text-center">
-                        Chưa có kịch bản nào. Hãy vào chi tiết kịch bản để thêm vào chiến dịch này.
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {campaignProjects.map(project => (
-                          <div 
-                            key={project.id} 
-                            onClick={() => router.push(`/projects/${project.id}`)}
-                            className="flex items-center justify-between p-3 border border-l-4 border-l-primary rounded-md hover:border-primary/50 cursor-pointer bg-background transition-colors group shadow-sm"
-                          >
-                            <div className="flex-1 truncate pr-2">
-                              <p className="text-sm font-medium truncate">{project.name}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5 capitalize flex items-center gap-1">
-                                <FolderPlus className="h-3 w-3" /> Dự án • {project.status}
-                              </p>
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeProjectFromCampaign(campaign.id, project.id);
-                              }}
-                              title="Gỡ khỏi chiến dịch"
-                            >
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </div>
-                        ))}
-
-                        {campaignIdeas.map(idea => (
-                          <div 
-                            key={idea.id} 
-                            onClick={() => router.push(`/ideas`)}
-                            className="flex items-center justify-between p-3 border border-l-4 border-l-orange-500 rounded-md hover:border-orange-500/50 cursor-pointer bg-background transition-colors group shadow-sm"
-                          >
-                            <div className="flex-1 truncate pr-2">
-                              <p className="text-sm font-medium truncate">{idea.content || "Ý tưởng trống"}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                                <Lightbulb className="h-3 w-3 text-orange-500" /> Ngân hàng ý tưởng
-                              </p>
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeIdeaFromCampaign(campaign.id, idea.id);
-                              }}
-                              title="Gỡ khỏi chiến dịch"
-                            >
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <CampaignBoard 
+                    campaign={campaign} 
+                    ideas={ideas} 
+                    projects={projects} 
+                    useProjectsHook={useProjectsHook} 
+                  />
                 </div>
               </Card>
             );
           })}
         </div>
       )}
+
+      <Dialog open={!!deleteCampaignId} onOpenChange={(open) => !open && setDeleteCampaignId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xóa Chiến dịch</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa chiến dịch này? Các dự án và ý tưởng bên trong sẽ KHÔNG bị xóa khỏi ứng dụng, nhưng sẽ bị gỡ khỏi nhóm chiến dịch này.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteCampaignId(null)}>Hủy</Button>
+            <Button variant="destructive" onClick={() => {
+              if (deleteCampaignId) {
+                deleteCampaign(deleteCampaignId);
+                setDeleteCampaignId(null);
+              }
+            }}>Xóa Chiến dịch</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -46,6 +46,13 @@ export type Project = {
 
 export type CampaignGoal = "viral" | "conversion" | "brand_awareness";
 
+export type CampaignPhase = {
+  id: string;
+  name: string;
+  order: number;
+  ideaIds: string[];
+};
+
 export type Campaign = {
   id: string;
   name: string;
@@ -53,7 +60,8 @@ export type Campaign = {
   startDate?: string;
   endDate?: string;
   projectIds: string[];
-  ideaIds?: string[];
+  ideaIds?: string[]; // Legacy
+  phases?: CampaignPhase[];
 };
 
 const defaultBlocks: ScriptBlock[] = [
@@ -94,7 +102,24 @@ export function useProjects() {
       const savedCampaigns = localStorage.getItem("creator-campaigns");
       if (savedCampaigns) {
         try {
-          localCampaigns = JSON.parse(savedCampaigns);
+          const parsed = JSON.parse(savedCampaigns);
+          // Migrate legacy campaigns
+          localCampaigns = parsed.map((c: any) => {
+            if (!c.phases) {
+              return {
+                ...c,
+                phases: [
+                  {
+                    id: `phase-legacy-${Date.now()}`,
+                    name: "Lộ trình chung",
+                    order: 1,
+                    ideaIds: c.ideaIds || []
+                  }
+                ]
+              };
+            }
+            return c;
+          });
         } catch (e) {
           console.error("Failed to parse local campaigns", e);
         }
@@ -227,6 +252,14 @@ export function useProjects() {
       goal,
       projectIds: [],
       ideaIds: [],
+      phases: [
+        {
+          id: `phase-${Date.now()}`,
+          name: "Lộ trình chung",
+          order: 1,
+          ideaIds: []
+        }
+      ]
     };
     saveCampaigns([newCampaign, ...campaigns]);
     return newCampaign.id;
@@ -269,6 +302,7 @@ export function useProjects() {
     saveProjects(updatedProjects, true);
   };
 
+  // Legacy (Keep for compatibility or migrate)
   const addIdeaToCampaign = (campaignId: string, ideaId: string) => {
     const updatedCampaigns = campaigns.map(c => {
       if (c.id === campaignId) {
@@ -290,6 +324,113 @@ export function useProjects() {
       return c;
     });
     saveCampaigns(updatedCampaigns);
+  };
+
+  // Phase Management
+  const addPhase = (campaignId: string, name: string) => {
+    saveCampaigns(campaigns.map(c => {
+      if (c.id === campaignId) {
+        const phases = c.phases || [];
+        const newPhase: CampaignPhase = {
+          id: `phase-${Date.now()}`,
+          name,
+          order: phases.length > 0 ? Math.max(...phases.map(p => p.order)) + 1 : 1,
+          ideaIds: []
+        };
+        return { ...c, phases: [...phases, newPhase] };
+      }
+      return c;
+    }));
+  };
+
+  const updatePhaseOrder = (campaignId: string, phases: CampaignPhase[]) => {
+    saveCampaigns(campaigns.map(c => 
+      c.id === campaignId ? { ...c, phases } : c
+    ));
+  };
+
+  const deletePhase = (campaignId: string, phaseId: string) => {
+    saveCampaigns(campaigns.map(c => {
+      if (c.id === campaignId && c.phases) {
+        return { ...c, phases: c.phases.filter(p => p.id !== phaseId) };
+      }
+      return c;
+    }));
+  };
+
+  const renamePhase = (campaignId: string, phaseId: string, newName: string) => {
+    saveCampaigns(campaigns.map(c => {
+      if (c.id === campaignId && c.phases) {
+        return {
+          ...c,
+          phases: c.phases.map(p => p.id === phaseId ? { ...p, name: newName } : p)
+        };
+      }
+      return c;
+    }));
+  };
+
+  const addIdeaToPhase = (campaignId: string, phaseId: string, ideaId: string) => {
+    saveCampaigns(campaigns.map(c => {
+      if (c.id === campaignId && c.phases) {
+        return {
+          ...c,
+          phases: c.phases.map(p => {
+            if (p.id === phaseId && !p.ideaIds.includes(ideaId)) {
+              return { ...p, ideaIds: [...p.ideaIds, ideaId] };
+            }
+            return p;
+          })
+        };
+      }
+      return c;
+    }));
+  };
+
+  const removeIdeaFromPhase = (campaignId: string, phaseId: string, ideaId: string) => {
+    saveCampaigns(campaigns.map(c => {
+      if (c.id === campaignId && c.phases) {
+        return {
+          ...c,
+          phases: c.phases.map(p => {
+            if (p.id === phaseId) {
+              return { ...p, ideaIds: p.ideaIds.filter(id => id !== ideaId) };
+            }
+            return p;
+          })
+        };
+      }
+      return c;
+    }));
+  };
+
+  const moveIdeaBetweenPhases = (campaignId: string, fromPhaseId: string, toPhaseId: string, ideaId: string, newIndex: number) => {
+    saveCampaigns(campaigns.map(c => {
+      if (c.id === campaignId && c.phases) {
+        const newPhases = [...c.phases];
+        const fromPhaseIndex = newPhases.findIndex(p => p.id === fromPhaseId);
+        const toPhaseIndex = newPhases.findIndex(p => p.id === toPhaseId);
+        
+        if (fromPhaseIndex === -1 || toPhaseIndex === -1) return c;
+
+        // Remove from source
+        newPhases[fromPhaseIndex] = {
+          ...newPhases[fromPhaseIndex],
+          ideaIds: newPhases[fromPhaseIndex].ideaIds.filter(id => id !== ideaId)
+        };
+
+        // Insert into destination
+        const newIdeaIds = [...newPhases[toPhaseIndex].ideaIds];
+        newIdeaIds.splice(newIndex, 0, ideaId);
+        newPhases[toPhaseIndex] = {
+          ...newPhases[toPhaseIndex],
+          ideaIds: newIdeaIds
+        };
+
+        return { ...c, phases: newPhases };
+      }
+      return c;
+    }));
   };
 
   const updateProjectTasks = (id: string, tasks: ProjectTask[]) => {
@@ -323,6 +464,13 @@ export function useProjects() {
     addProjectToCampaign,
     removeProjectFromCampaign,
     addIdeaToCampaign,
-    removeIdeaFromCampaign
+    removeIdeaFromCampaign,
+    addPhase,
+    updatePhaseOrder,
+    deletePhase,
+    renamePhase,
+    addIdeaToPhase,
+    removeIdeaFromPhase,
+    moveIdeaBetweenPhases
   };
 }
