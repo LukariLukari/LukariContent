@@ -130,15 +130,22 @@ export function useIdeas() {
       createdAt: new Date().toISOString(),
       ...initialData
     };
-    saveIdeas([...ideas, newIdea], true);
+    saveIdeas([newIdea, ...ideas], true);
     return newIdea;
   };
 
-  const deleteIdea = (id: string) => {
+  const deleteIdea = async (id: string) => {
     const filtered = ideas.filter(i => i.id !== id);
     // Re-order
     const reordered = filtered.map((idea, index) => ({ ...idea, order: index + 1 }));
     saveIdeas(reordered, true);
+    if (supabase) {
+      try {
+        await supabase.from('ideas').delete().eq('id', id);
+      } catch (err) {
+        console.error("Failed to delete idea from Supabase", err);
+      }
+    }
   };
 
   const updateIdea = (id: string, field: keyof Idea, value: string | number) => {

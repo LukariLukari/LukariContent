@@ -1,11 +1,13 @@
 "use client";
 
 import { useEditor, EditorContent } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
-import { TextStyle } from '@tiptap/extension-text-style'
+import { TextStyle, FontSize } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
+import { Extension } from '@tiptap/core'
 import Placeholder from '@tiptap/extension-placeholder'
-import { Bold, Italic, Strikethrough, Palette } from "lucide-react"
+import { Bold, Italic, Strikethrough, Palette, Type } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { useEffect } from 'react'
@@ -22,6 +24,16 @@ const COLORS = [
   { name: 'Hồng', value: '#ec4899' },
 ]
 
+const FONT_SIZES = [
+  { name: 'Mặc định (16px)', value: '' },
+  { name: '12px', value: '12px' },
+  { name: '14px', value: '14px' },
+  { name: '16px', value: '16px' },
+  { name: '18px', value: '18px' },
+  { name: '20px', value: '20px' },
+  { name: '24px', value: '24px' },
+]
+
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -35,6 +47,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
       StarterKit,
       TextStyle,
       Color,
+      FontSize,
       Placeholder.configure({
         placeholder: placeholder || 'Nhập nội dung...',
         emptyEditorClass: 'is-editor-empty',
@@ -43,7 +56,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
     content: value,
     editorProps: {
       attributes: {
-        class: "prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[80px]",
+        class: "prose dark:prose-invert max-w-none focus:outline-none min-h-[24px] text-[16px] leading-relaxed",
       },
       transformPastedHTML(html) {
         // Xử lý đặc biệt khi copy từ Excel/Google Sheets (chứa thẻ table)
@@ -91,68 +104,102 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   }
 
   return (
-    <div className={cn("flex flex-col border border-border/50 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all", className)}>
-      <div className="flex flex-wrap items-center gap-1 p-1 border-b border-border/50 bg-secondary/30">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          className={cn("h-8 w-8 p-0 rounded-sm", editor.isActive('bold') && "bg-secondary text-foreground")}
-          title="In đậm"
+    <div className={cn("flex flex-col border border-transparent rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all", className)}>
+      {editor && (
+        <BubbleMenu 
+          editor={editor} 
+          tippyOptions={{ duration: 100 }}
+          className="flex items-center gap-1 p-1 bg-background border border-border shadow-md rounded-md z-50"
         >
-          <Bold className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={cn("h-8 w-8 p-0 rounded-sm", editor.isActive('italic') && "bg-secondary text-foreground")}
-          title="In nghiêng"
-        >
-          <Italic className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          className={cn("h-8 w-8 p-0 rounded-sm", editor.isActive('strike') && "bg-secondary text-foreground")}
-          title="Gạch ngang"
-        >
-          <Strikethrough className="h-4 w-4" />
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            className={cn("h-8 w-8 p-0 rounded-sm hover:bg-secondary", editor.isActive('bold') && "bg-secondary text-foreground")}
+            title="In đậm"
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            className={cn("h-8 w-8 p-0 rounded-sm hover:bg-secondary", editor.isActive('italic') && "bg-secondary text-foreground")}
+            title="In nghiêng"
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            className={cn("h-8 w-8 p-0 rounded-sm hover:bg-secondary", editor.isActive('strike') && "bg-secondary text-foreground")}
+            title="Gạch ngang"
+          >
+            <Strikethrough className="h-4 w-4" />
+          </Button>
+  
+          <div className="w-px h-4 bg-border/50 mx-1" />
 
-        <div className="w-px h-4 bg-border/50 mx-1" />
+          <Popover>
+            <PopoverTrigger render={<Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-sm hover:bg-secondary" title="Cỡ chữ" />}>
+              <Type className="h-4 w-4" />
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-1 z-[60]" align="center" side="top">
+              <div className="flex flex-col gap-1 min-w-[100px]">
+                {FONT_SIZES.map((size) => (
+                  <button
+                    key={size.name}
+                    className={cn(
+                      "text-left px-3 py-1.5 text-sm rounded-md hover:bg-secondary transition-colors focus:outline-none focus:bg-secondary",
+                      editor.isActive('textStyle', { fontSize: size.value }) && "bg-secondary font-medium"
+                    )}
+                    onClick={() => {
+                      if (size.value) {
+                        editor.chain().focus().setFontSize(size.value).run();
+                      } else {
+                        editor.chain().focus().unsetFontSize().run();
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: size.value || 'inherit' }}>{size.name}</span>
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+  
+          <Popover>
+            <PopoverTrigger render={<Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-sm hover:bg-secondary" title="Màu chữ" />}>
+              <Palette className="h-4 w-4" style={{ color: editor.getAttributes('textStyle').color || 'currentColor' }} />
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2 z-[60]" align="center" side="top">
+              <div className="flex flex-wrap gap-1 max-w-[120px]">
+                {COLORS.map((color) => (
+                  <button
+                    key={color.name}
+                    className={cn(
+                      "w-6 h-6 rounded-md border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all",
+                      editor.isActive('textStyle', { color: color.value }) && "ring-2 ring-primary"
+                    )}
+                    style={{ backgroundColor: color.value || 'var(--foreground)' }}
+                    onClick={() => {
+                      if (color.value) {
+                        editor.chain().focus().setColor(color.value).run();
+                      } else {
+                        editor.chain().focus().unsetColor().run();
+                      }
+                    }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </BubbleMenu>
+      )}
 
-        <Popover>
-          <PopoverTrigger render={<Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-sm" title="Màu chữ" />}>
-            <Palette className="h-4 w-4" style={{ color: editor.getAttributes('textStyle').color || 'currentColor' }} />
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-2" align="start">
-            <div className="flex flex-wrap gap-1 max-w-[120px]">
-              {COLORS.map((color) => (
-                <button
-                  key={color.name}
-                  className={cn(
-                    "w-6 h-6 rounded-md border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all",
-                    editor.isActive('textStyle', { color: color.value }) && "ring-2 ring-primary"
-                  )}
-                  style={{ backgroundColor: color.value || 'var(--foreground)' }}
-                  onClick={() => {
-                    if (color.value) {
-                      editor.chain().focus().setColor(color.value).run();
-                    } else {
-                      editor.chain().focus().unsetColor().run();
-                    }
-                  }}
-                  title={color.name}
-                />
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      <div className="p-3">
+      <div className="p-2">
         <EditorContent editor={editor} />
       </div>
     </div>

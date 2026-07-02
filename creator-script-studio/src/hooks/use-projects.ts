@@ -228,8 +228,15 @@ export function useProjects() {
     return newProject.id;
   };
 
-  const deleteProject = (id: string) => {
+  const deleteProject = async (id: string) => {
     saveProjects(projects.filter(p => p.id !== id), true);
+    if (supabase) {
+      try {
+        await supabase.from('projects').delete().eq('id', id);
+      } catch (err) {
+        console.error("Failed to delete project from Supabase", err);
+      }
+    }
   };
 
   const updateProjectBlocks = (id: string, blocks: ScriptBlock[]) => {
@@ -298,11 +305,19 @@ export function useProjects() {
     return newCampaign.id;
   };
 
-  const deleteCampaign = (id: string) => {
+  const deleteCampaign = async (id: string) => {
     saveCampaigns(campaigns.filter(c => c.id !== id));
     // Remove campaignId from projects
     const updatedProjects = projects.map(p => p.campaignId === id ? { ...p, campaignId: undefined } : p);
     saveProjects(updatedProjects, true);
+    
+    if (supabase) {
+      try {
+        await supabase.from('campaigns').delete().eq('id', id);
+      } catch (err) {
+        console.error("Failed to delete campaign from Supabase", err);
+      }
+    }
   };
 
   const addProjectToCampaign = (campaignId: string, projectId: string) => {

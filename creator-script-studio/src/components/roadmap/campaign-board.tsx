@@ -29,6 +29,7 @@ import { Plus, GripVertical, Trash2, Lightbulb, PenSquare, LayoutList, ChevronRi
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { cn } from "@/lib/utils";
 
 const toRoman = (num: number): string => {
@@ -46,11 +47,17 @@ const toRoman = (num: number): string => {
   return str;
 };
 
+const stripHtml = (html: string) => {
+  if (!html) return "";
+  return html.replace(/<[^>]*>?/gm, '');
+};
+
 // Sortable Idea Item
 function SortableIdeaItem({ idea, index, onRemove, onUpdateCustomIdea }: { idea: Idea, index: number, onRemove: () => void, onUpdateCustomIdea?: (oldId: string, newText: string) => void }) {
   const isCustom = idea.id.startsWith("custom:");
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(idea.hook || idea.content || "");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [editText, setEditText] = useState(stripHtml(idea.hook) || stripHtml(idea.content) || "");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: idea.id,
     data: {
@@ -88,36 +95,40 @@ function SortableIdeaItem({ idea, index, onRemove, onUpdateCustomIdea }: { idea:
       </div>
       <div
         className={cn(
-          "flex items-center justify-between p-3 rounded-md shadow-sm flex-1 overflow-hidden border",
+          "flex flex-col p-3 rounded-md shadow-sm flex-1 overflow-hidden border",
           isCustom 
             ? "bg-muted/30 border-dashed border-muted-foreground/30 text-foreground" 
-            : "bg-background border-l-4 border-l-orange-500 border-border"
+            : "bg-background border-l-[4px] !border-l-orange-500"
         )}
       >
-      <div className="flex items-center gap-2 overflow-hidden flex-1">
+        <div className="flex items-start justify-between w-full gap-2">
+          <div className="flex items-start gap-2 overflow-hidden flex-1">
         {isEditing ? (
-          <form onSubmit={handleSave} className="flex items-center gap-2 flex-1 mr-2">
-            <Input 
-              autoFocus
+          <div className="flex flex-col gap-2 flex-1 mr-2 bg-background border rounded-md p-1 shadow-sm mt-1 mb-1">
+            <RichTextEditor 
               value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              className="h-7 text-sm bg-background"
+              onChange={setEditText}
+              placeholder="Nhập nội dung..."
             />
-            <Button type="submit" size="sm" className="h-7 px-2 bg-orange-500 hover:bg-orange-600 text-white">Lưu</Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => { setIsEditing(false); setEditText(idea.hook || idea.content || ""); }}>Hủy</Button>
-          </form>
+            <div className="flex items-center justify-end gap-2 p-1 border-t">
+              <Button type="button" variant="ghost" size="sm" className="h-7 px-3 text-xs" onClick={() => { setIsEditing(false); setEditText(idea.hook || idea.content || ""); }}>Hủy</Button>
+              <Button type="button" size="sm" className="h-7 px-4 text-xs bg-orange-500 hover:bg-orange-600 text-white" onClick={handleSave}>Lưu</Button>
+            </div>
+          </div>
         ) : (
           <div 
-            className={cn("flex-1 truncate pr-2 select-none group/text", !isCustom && "cursor-pointer")}
-            onClick={() => { if (!isCustom) window.open("/ideas", "_blank"); }}
-            title={isCustom ? undefined : "Đến Ngân hàng ý tưởng"}
+            className={cn("flex-1 select-none group/text", !isCustom && "cursor-pointer")}
+            onClick={() => { if (!isCustom) setIsExpanded(!isExpanded); }}
+            title={isCustom ? undefined : "Nhấn để xem chi tiết"}
           >
-            <p className={cn(
-              "text-sm truncate transition-colors", 
-              isCustom ? "font-normal italic" : "font-medium group-hover/text:text-orange-500"
-            )}>
-              {idea.hook || idea.content || "Ý tưởng trống"}
-            </p>
+            <div 
+              className={cn(
+                "text-sm break-words whitespace-pre-wrap transition-colors prose dark:prose-invert max-w-none prose-p:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0 prose-sm", 
+                isCustom ? "font-normal italic" : "group-hover/text:text-orange-500",
+                !isExpanded && "line-clamp-2"
+              )}
+              dangerouslySetInnerHTML={{ __html: idea.hook || idea.content || "Ý tưởng trống" }}
+            />
             {!isCustom && (
               <div className="flex items-center gap-2 mt-0.5">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
@@ -127,34 +138,68 @@ function SortableIdeaItem({ idea, index, onRemove, onUpdateCustomIdea }: { idea:
             )}
           </div>
         )}
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        {isCustom && !isEditing && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10"
-            onClick={() => setIsEditing(true)}
-            title="Chỉnh sửa nội dung"
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
+          </div>
+          <div className="flex items-start gap-1 shrink-0 mt-0.5 pt-0.5">
+            {isCustom && !isEditing && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10"
+                onClick={() => setIsEditing(true)}
+                title="Chỉnh sửa nội dung"
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            )}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={onRemove}
+              title="Gỡ khỏi lộ trình"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <button className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0 p-1 rounded-md hover:bg-secondary" {...attributes} {...listeners}>
+              <GripVertical className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* EXPANDED SECTION */}
+        {isExpanded && !isCustom && (
+          <div className="flex flex-col mt-4 pt-4 border-t border-dashed gap-4 w-full cursor-default animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">Hook (3s đầu)</span>
+              <div 
+                className="text-sm prose dark:prose-invert max-w-none prose-p:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0 prose-sm text-foreground"
+                dangerouslySetInnerHTML={{ __html: idea.hook || "Chưa có nội dung" }}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">Nội dung (Core)</span>
+              <div 
+                className="text-sm prose dark:prose-invert max-w-none prose-p:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0 prose-sm text-foreground"
+                dangerouslySetInnerHTML={{ __html: idea.content || "Chưa có nội dung" }}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">Kết (Lời kêu gọi - CTA) & Ghi chú</span>
+              <div 
+                className="text-sm prose dark:prose-invert max-w-none prose-p:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0 prose-sm text-muted-foreground italic"
+                dangerouslySetInnerHTML={{ __html: idea.details || "Chưa có ghi chú" }}
+              />
+            </div>
+            
+            <div className="flex justify-end mt-2">
+              <Button size="sm" variant="outline" className="h-8 text-xs font-semibold" onClick={(e) => { e.stopPropagation(); window.open(`/ideas#idea-${idea.id}`, "_blank"); }}>
+                Mở trong Ngân hàng ý tưởng
+              </Button>
+            </div>
+          </div>
         )}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-          onClick={onRemove}
-          title="Gỡ khỏi lộ trình"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-        <button className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0 p-1 rounded-md hover:bg-secondary" {...attributes} {...listeners}>
-          <GripVertical className="h-4 w-4" />
-        </button>
       </div>
     </div>
-  </div>
   );
 }
 
@@ -270,7 +315,7 @@ function SortablePhase({
               ) : (
                 availableIdeas.map(idea => (
                   <DropdownMenuItem key={idea.id} onClick={() => onAddIdea(idea.id)} className="flex flex-col items-start gap-1 p-2 cursor-pointer border-b last:border-0">
-                    <span className="font-medium text-sm truncate w-full">{idea.hook || idea.content || "Ý tưởng trống"}</span>
+                    <span className="font-medium text-sm truncate w-full">{stripHtml(idea.hook) || stripHtml(idea.content) || "Ý tưởng trống"}</span>
                     <span className="text-[10px] text-muted-foreground uppercase font-semibold">{idea.platform} • {idea.contentType}</span>
                   </DropdownMenuItem>
                 ))
@@ -381,9 +426,6 @@ export function CampaignBoard({ campaign, ideas, projects, useProjectsHook, useI
   // Dialog States
   const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
   const [newPhaseName, setNewPhaseName] = useState("");
-  
-  const [renamePhaseId, setRenamePhaseId] = useState<string | null>(null);
-  const [renamePhaseName, setRenamePhaseName] = useState("");
 
   const [deletePhaseId, setDeletePhaseId] = useState<string | null>(null);
 
@@ -480,14 +522,6 @@ export function CampaignBoard({ campaign, ideas, projects, useProjectsHook, useI
     }
   };
 
-  const handleRenamePhase = () => {
-    if (renamePhaseId && renamePhaseName.trim()) {
-      renamePhase(campaign.id, renamePhaseId, renamePhaseName.trim());
-      setRenamePhaseId(null);
-      setRenamePhaseName("");
-    }
-  };
-
   const handleDeletePhase = () => {
     if (deletePhaseId) {
       deletePhase(campaign.id, deletePhaseId);
@@ -534,9 +568,8 @@ export function CampaignBoard({ campaign, ideas, projects, useProjectsHook, useI
                   onAddIdea={(ideaId) => addIdeaToPhase(campaign.id, phase.id, ideaId)}
                   onRemoveIdea={(ideaId) => removeIdeaFromPhase(campaign.id, phase.id, ideaId)}
                   onDeletePhase={() => setDeletePhaseId(phase.id)}
-                  onRenamePhase={() => {
-                    setRenamePhaseId(phase.id);
-                    setRenamePhaseName(phase.name);
+                  onRenamePhase={(newName) => {
+                    renamePhase(campaign.id, phase.id, newName);
                   }}
                   onQuickAddIdea={(text) => {
                     const customId = `custom:${Date.now()}::${text}`;
@@ -587,26 +620,6 @@ export function CampaignBoard({ campaign, ideas, projects, useProjectsHook, useI
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreatePhaseOpen(false)}>Hủy</Button>
             <Button onClick={handleCreatePhase}>Tạo Lộ trình</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!renamePhaseId} onOpenChange={(open) => !open && setRenamePhaseId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Đổi tên Lộ trình</DialogTitle>
-          </DialogHeader>
-          <Input 
-            value={renamePhaseName}
-            onChange={(e) => setRenamePhaseName(e.target.value)}
-            placeholder="Nhập tên mới..."
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleRenamePhase();
-            }}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRenamePhaseId(null)}>Hủy</Button>
-            <Button onClick={handleRenamePhase}>Lưu thay đổi</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

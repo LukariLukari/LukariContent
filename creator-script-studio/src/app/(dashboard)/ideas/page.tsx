@@ -4,6 +4,7 @@ import { useIdeas, Idea, PlatformType, ContentType } from "@/hooks/use-ideas";
 import { Button } from "@/components/ui/button";
 import { Plus, Lightbulb, Trash2, GripVertical, ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
   DndContext,
   closestCenter,
@@ -90,11 +91,12 @@ function SortableIdeaRow({ idea, index, onDeleteRequest, onUpdate }: { idea: Ide
 
   return (
     <div 
+      id={`idea-${idea.id}`}
       ref={setNodeRef} 
       style={style} 
       className={cn(
-        "grid grid-cols-[40px_100px_120px_1fr_40px] divide-x divide-dashed divide-border/50 border-b items-stretch bg-card transition-colors group hover:bg-secondary/20",
-        isDragging && "shadow-lg border-primary/50 bg-secondary"
+        "grid grid-cols-[40px_140px_1fr_40px] divide-x divide-dashed divide-border/50 border rounded-xl shadow-md items-stretch bg-card transition-all group hover:border-orange-500/30 hover:shadow-lg overflow-hidden",
+        isDragging && "shadow-2xl border-primary/50 bg-secondary ring-2 ring-primary/20 scale-[1.01]"
       )}
     >
       <div className="flex flex-col items-center justify-start pt-4 px-2 text-muted-foreground gap-2">
@@ -104,13 +106,13 @@ function SortableIdeaRow({ idea, index, onDeleteRequest, onUpdate }: { idea: Ide
         <span className="text-xs font-medium">{index + 1}</span>
       </div>
 
-      <div className="p-3">
+      <div className="p-3 flex flex-col gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger className="w-full">
             <div className={cn(
               "text-xs px-2 py-1.5 rounded-md border text-left flex justify-between items-center transition-colors hover:bg-secondary",
-              idea.platform === "Gốc (TikTok/FB/Rednote)" ? "bg-blue-50/50 border-blue-200 text-blue-700" :
-              idea.platform === "Reup (YT/Insta)" ? "bg-orange-50/50 border-orange-200 text-orange-700" :
+              idea.platform === "Gốc (TikTok/FB/Rednote)" ? "bg-blue-50/50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400" :
+              idea.platform === "Reup (YT/Insta)" ? "bg-orange-50/50 border-orange-200 text-orange-700 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-400" :
               "bg-secondary/50 border-border text-foreground"
             )}>
               <span className="truncate pr-1">{idea.platform.split(' ')[0]}</span>
@@ -125,9 +127,7 @@ function SortableIdeaRow({ idea, index, onDeleteRequest, onUpdate }: { idea: Ide
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
 
-      <div className="p-3">
         <DropdownMenu>
           <DropdownMenuTrigger className="w-full">
             <div className="text-xs px-2 py-1.5 rounded-md border bg-background text-left flex justify-between items-center transition-colors hover:bg-secondary">
@@ -150,32 +150,33 @@ function SortableIdeaRow({ idea, index, onDeleteRequest, onUpdate }: { idea: Ide
           {/* Hook */}
           <div className="flex flex-col p-2">
             <span className="text-[10px] font-bold text-orange-600/80 dark:text-orange-400/80 uppercase px-2 py-1">Hook (3s đầu)</span>
-            <AutoResizeTextarea 
+            <RichTextEditor 
               value={idea.hook} 
               onChange={(val) => onUpdate(idea.id, "hook", val)}
               placeholder="Câu hook thu hút..."
+              className="border-none shadow-none rounded-none bg-transparent mt-1"
             />
           </div>
 
           {/* Nội dung */}
           <div className="flex flex-col p-2">
             <span className="text-[10px] font-bold text-orange-600/80 dark:text-orange-400/80 uppercase px-2 py-1">Nội dung (Core)</span>
-            <AutoResizeTextarea 
+            <RichTextEditor 
               value={idea.content} 
               onChange={(val) => onUpdate(idea.id, "content", val)}
               placeholder="Ý tưởng cốt lõi..."
-              className="font-medium min-h-[60px]"
+              className="border-none shadow-none rounded-none bg-transparent mt-1"
             />
           </div>
 
           {/* Kết (CTA) */}
           <div className="flex flex-col p-2">
             <span className="text-[10px] font-bold text-orange-600/80 dark:text-orange-400/80 uppercase px-2 py-1">Kết (Lời kêu gọi - CTA) & Ghi chú</span>
-            <AutoResizeTextarea 
+            <RichTextEditor 
               value={idea.details} 
               onChange={(val) => onUpdate(idea.id, "details", val)}
               placeholder="Chi tiết triển khai, góc máy, âm thanh..."
-              className="text-muted-foreground"
+              className="border-none shadow-none rounded-none bg-transparent mt-1"
             />
           </div>
         </div>
@@ -199,6 +200,18 @@ export default function IdeasPage() {
   const { ideas, isLoaded, addIdea, deleteIdea, updateIdea, reorderIdeas } = useIdeas();
   const [ideaToDelete, setIdeaToDelete] = useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+  
+  const totalPages = Math.max(1, Math.ceil(ideas.length / ITEMS_PER_PAGE));
+  const currentIdeas = ideas.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [ideas.length, currentPage, totalPages]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -212,6 +225,32 @@ export default function IdeasPage() {
       reorderIdeas(arrayMove(ideas, oldIndex, newIndex));
     }
   };
+
+  useEffect(() => {
+    if (isLoaded && ideas.length > 0) {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#idea-')) {
+        const id = hash.substring(1);
+        // Find which page the idea is on
+        const ideaIndex = ideas.findIndex(i => `idea-${i.id}` === id);
+        if (ideaIndex !== -1) {
+          const targetPage = Math.floor(ideaIndex / ITEMS_PER_PAGE) + 1;
+          if (currentPage !== targetPage) {
+            setCurrentPage(targetPage);
+          }
+        }
+        
+        setTimeout(() => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-2', 'ring-orange-500', 'ring-offset-2', 'transition-all');
+            setTimeout(() => el.classList.remove('ring-2', 'ring-orange-500', 'ring-offset-2'), 2500);
+          }
+        }, 300);
+      }
+    }
+  }, [isLoaded, ideas.length, currentPage]);
 
   if (!isLoaded) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Đang tải...</div>;
@@ -237,12 +276,19 @@ export default function IdeasPage() {
         <div className="flex-1 overflow-auto">
           <div className="min-w-[900px] flex flex-col h-full">
             {/* Table Header */}
-            <div className="grid grid-cols-[40px_100px_120px_1fr_40px] divide-x divide-dashed divide-border/50 bg-secondary/30 border-b text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-500 items-center sticky top-0 z-10">
+            {/* Table Header */}
+            <div className="grid grid-cols-[40px_140px_1fr_40px] divide-x divide-dashed divide-border/50 bg-secondary/30 border-b text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-500 items-center sticky top-0 z-10 mx-2 mt-2 rounded-t-xl border-x border-t">
               <div className="text-center p-3">STT</div>
-              <div className="p-3">Nền tảng</div>
-              <div className="p-3">Dạng Content</div>
+              <div className="p-3">Nền tảng & Content</div>
               <div className="p-3">Chi tiết (Hook, Nội dung, Kết)</div>
               <div className="p-3"></div>
+            </div>
+
+            {/* Quick Add Top */}
+            <div className="p-2 bg-secondary/5 border-b">
+              <Button variant="ghost" onClick={() => { addIdea(); setCurrentPage(1); }} className="w-full text-muted-foreground hover:text-foreground border border-dashed hover:border-solid hover:bg-secondary">
+                <Plus className="h-4 w-4 mr-2" /> Nhấn để thêm dòng mới
+              </Button>
             </div>
 
             {/* Table Body */}
@@ -254,13 +300,13 @@ export default function IdeasPage() {
                 </div>
               ) : (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={ideas} strategy={verticalListSortingStrategy}>
-                    <div className="flex flex-col pb-12">
-                      {ideas.map((idea, index) => (
+                  <SortableContext items={currentIdeas} strategy={verticalListSortingStrategy}>
+                    <div className="flex flex-col pb-4 gap-4 pt-4 bg-secondary/5 px-2">
+                      {currentIdeas.map((idea, index) => (
                         <SortableIdeaRow 
                           key={idea.id} 
                           idea={idea} 
-                          index={index} 
+                          index={(currentPage - 1) * ITEMS_PER_PAGE + index} 
                           onDeleteRequest={setIdeaToDelete} 
                           onUpdate={updateIdea} 
                         />
@@ -273,12 +319,19 @@ export default function IdeasPage() {
           </div>
         </div>
         
-        {/* Quick Add footer */}
-        {ideas.length > 0 && (
-          <div className="p-2 bg-secondary/20 border-t border-dashed">
-            <Button variant="ghost" onClick={() => addIdea()} className="w-full text-muted-foreground hover:text-foreground">
-              <Plus className="h-4 w-4 mr-2" /> Nhấn để thêm dòng mới
-            </Button>
+        {/* Pagination Footer */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-3 bg-card border-t text-sm">
+            <span className="text-muted-foreground">Hiển thị {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, ideas.length)} trên tổng {ideas.length}</span>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                Trước
+              </Button>
+              <span className="px-3 py-1 font-medium bg-secondary rounded-md text-foreground">{currentPage} / {totalPages}</span>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                Sau
+              </Button>
+            </div>
           </div>
         )}
       </div>
